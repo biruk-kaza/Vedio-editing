@@ -79,11 +79,17 @@ jobs:
       - name: "📦 Install Dependencies"
         run: |
           npm ci || npm install
-          # Install Amharic fonts
+          # Install system FFmpeg (modern version) and Amharic fonts
           sudo apt-get update
-          sudo apt-get install -y fonts-noto-core fonts-noto-cjk ffmpeg
-          # Verify font availability
-          fc-list | grep -i "Noto Sans Ethiopic" || echo "⚠️ Ethiopic font not found, will use fallback"
+          sudo apt-get install -y ffmpeg fonts-noto-core fonts-noto-cjk
+          # Verify system FFmpeg version (should be 4.4+ on ubuntu-latest)
+          echo "🔧 System FFmpeg version:"
+          ffmpeg -version | head -1
+          echo "🔧 Available filters:"
+          ffmpeg -filters 2>/dev/null | grep -E "(vignette|zoompan|ass|subtitles)" || true
+          # Verify Amharic font availability
+          echo "🔤 Amharic fonts:"
+          fc-list | grep -i "Noto Sans Ethiopic" || fc-list | grep -i "Ethiopic" || echo "⚠️ No Ethiopic font found, will use system fallback"
           fc-list | grep -i "Noto" | head -5
 
       - name: "🖼️ Generate Background"
