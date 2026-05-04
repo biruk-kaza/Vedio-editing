@@ -155,7 +155,7 @@ async function renderVideo(audioPath, assPath, bgPath, quality = 'high') {
     `[0:v]scale=1296:2304,`,
     `zoompan=z='1.1-0.1*on/(${Math.round(durationArg * CONFIG.fps)})':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=${Math.round(durationArg * CONFIG.fps)}:s=${CONFIG.width}x${CONFIG.height}:fps=${CONFIG.fps},`,
     `vignette=PI/4:mode=forward,`,
-    `colorbalance=rs=0.03:gs=-0.01:bs=-0.03:ms=0.02,`,
+    `colorbalance=rm=0.04:gm=-0.01:bm=-0.04,`,
     `ass='${assPathEscaped}'`,
     `[vout]`
   ].join('');

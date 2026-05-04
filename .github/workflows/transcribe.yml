@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - 'input/**'
+  workflow_dispatch:
 
 # Cancel any in-progress runs for the same branch
 concurrency:
@@ -63,7 +64,7 @@ jobs:
           # Install ffmpeg for audio processing
           sudo apt-get update && sudo apt-get install -y ffmpeg
 
-      - name: "🎯 Transcribe with Whisper (Small Model)"
+      - name: "🎯 Transcribe with Whisper (Medium Model)"
         if: steps.detect.outputs.found == 'true'
         run: |
           python3 << 'PYTHON_SCRIPT'
@@ -73,18 +74,19 @@ jobs:
           import os
 
           audio_file = "${{ steps.detect.outputs.file }}"
-          print(f"🎙️ Loading Whisper 'small' model...")
+          print(f"🎙️ Loading Whisper 'medium' model for highly accurate Amharic transcription...")
           print(f"📂 Processing: {audio_file}")
 
           try:
-              model = whisper.load_model("small")
+              model = whisper.load_model("medium")
               
               print("🔄 Transcribing Amharic audio (word-level timestamps)...")
               result = model.transcribe(
                   audio_file,
                   language="am",
                   word_timestamps=True,
-                  verbose=False
+                  verbose=False,
+                  initial_prompt="በስመ አብ ወወልድ ወመንፈስ ቅዱስ አሐዱ አምላክ አሜን። ይህ በአማርኛ የተነገረ ኦርቶዶክሳዊ ትምህርት ነው።"
               )
               
               # Extract word-level timestamps
@@ -127,7 +129,7 @@ jobs:
                   f.write("  EOTC Voice Studio — Amharic Transcription Review\n")
                   f.write("═" * 60 + "\n\n")
                   f.write(f"Audio: {audio_file}\n")
-                  f.write(f"Model: Whisper Small\n")
+                  f.write(f"Model: Whisper Medium\n")
                   f.write(f"Words: {len(words)}\n")
                   f.write(f"Duration: {captions_data['total_duration']:.1f}s\n\n")
                   f.write("─" * 60 + "\n")
@@ -179,7 +181,7 @@ jobs:
             git commit -m "🎙️ Transcription complete — $(wc -w < captions_review.txt) words detected
 
           Audio: ${{ steps.detect.outputs.file }}
-          Model: Whisper Small
+          Model: Whisper Medium
           
           ✏️ Review captions_review.txt and fix any Amharic errors.
           Then trigger 'Render Video' workflow for Phase 2."
@@ -196,7 +198,7 @@ jobs:
           echo "| Detail | Value |" >> $GITHUB_STEP_SUMMARY
           echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
           echo "| Audio File | \`${{ steps.detect.outputs.file }}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| Model | Whisper Small |" >> $GITHUB_STEP_SUMMARY
+          echo "| Model | Whisper Medium |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Next Steps" >> $GITHUB_STEP_SUMMARY
           echo "1. Review \`captions_review.txt\` for Amharic accuracy" >> $GITHUB_STEP_SUMMARY
