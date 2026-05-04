@@ -1,0 +1,32 @@
+{
+  "name": "eotc-voice-studio",
+  "version": "1.0.0",
+  "description": "EOTC Voice Studio — Amharic voice-to-TikTok video pipeline powered by Whisper + FFmpeg on GitHub Actions",
+  "type": "module",
+  "scripts": {
+    "transcribe": "node src/transcribe.js",
+    "render": "node src/render.js",
+    "generate-bg": "node src/generate-background.js",
+    "test": "node src/test.js"
+  },
+  "keywords": [
+    "eotc",
+    "amharic",
+    "whisper",
+    "tiktok",
+    "video",
+    "transcription",
+    "orthodox"
+  ],
+  "author": "EOTC Voice Studio",
+  "license": "MIT",
+  "dependencies": {
+    "fluent-ffmpeg": "^2.1.3",
+    "@ffmpeg-installer/ffmpeg": "^1.1.0",
+    "puppeteer": "^22.0.0",
+    "node-fetch": "^3.3.2"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

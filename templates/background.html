@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="am">
+<head>
+<meta charset="UTF-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    width: 1080px;
+    height: 1920px;
+    overflow: hidden;
+    background: #0a0a0f;
+    position: relative;
+  }
+
+  /* Deep gradient base */
+  .gradient-base {
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(
+      ellipse 80% 60% at 50% 45%,
+      rgba(26, 21, 32, 1) 0%,
+      rgba(15, 12, 20, 1) 40%,
+      rgba(10, 10, 15, 1) 100%
+    );
+  }
+
+  /* Gold radial glow */
+  .gold-glow {
+    position: absolute;
+    width: 900px;
+    height: 900px;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: radial-gradient(
+      circle,
+      rgba(212, 165, 116, 0.08) 0%,
+      rgba(212, 165, 116, 0.03) 40%,
+      transparent 70%
+    );
+    border-radius: 50%;
+  }
+
+  /* Ethiopian Orthodox Cross Pattern */
+  .cross-pattern {
+    position: absolute;
+    inset: 0;
+    opacity: 0.04;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120'%3E%3Cpath d='M60 10 L60 110 M10 60 L110 60 M52 18 L52 42 L28 42 L28 50 L52 50 L52 70 L28 70 L28 78 L52 78 L52 102 L68 102 L68 78 L92 78 L92 70 L68 70 L68 50 L92 50 L92 42 L68 42 L68 18 Z' fill='%23D4A574' stroke='none'/%3E%3C/svg%3E");
+    background-size: 180px 180px;
+  }
+
+  /* Top ambient light */
+  .top-light {
+    position: absolute;
+    width: 100%;
+    height: 500px;
+    top: -100px;
+    background: radial-gradient(
+      ellipse 70% 100% at 50% 0%,
+      rgba(212, 165, 116, 0.06) 0%,
+      transparent 100%
+    );
+  }
+
+  /* Bottom ambient shadow */
+  .bottom-shadow {
+    position: absolute;
+    width: 100%;
+    height: 600px;
+    bottom: 0;
+    background: linear-gradient(
+      to top,
+      rgba(5, 5, 8, 0.8) 0%,
+      transparent 100%
+    );
+  }
+
+  /* Decorative corner elements */
+  .corner {
+    position: absolute;
+    width: 200px;
+    height: 200px;
+    opacity: 0.06;
+  }
+  .corner-tl {
+    top: 40px; left: 40px;
+    border-top: 2px solid #D4A574;
+    border-left: 2px solid #D4A574;
+    border-radius: 8px 0 0 0;
+  }
+  .corner-tr {
+    top: 40px; right: 40px;
+    border-top: 2px solid #D4A574;
+    border-right: 2px solid #D4A574;
+    border-radius: 0 8px 0 0;
+  }
+  .corner-bl {
+    bottom: 40px; left: 40px;
+    border-bottom: 2px solid #D4A574;
+    border-left: 2px solid #D4A574;
+    border-radius: 0 0 0 8px;
+  }
+  .corner-br {
+    bottom: 40px; right: 40px;
+    border-bottom: 2px solid #D4A574;
+    border-right: 2px solid #D4A574;
+    border-radius: 0 0 8px 0;
+  }
+
+  /* Center cross ornament */
+  .center-cross {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 300px;
+    height: 300px;
+    opacity: 0.03;
+  }
+  .center-cross svg {
+    width: 100%;
+    height: 100%;
+  }
+
+  /* Vignette overlay */
+  .vignette {
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(
+      ellipse 75% 70% at 50% 50%,
+      transparent 50%,
+      rgba(5, 5, 8, 0.6) 100%
+    );
+  }
+
+  /* Noise texture overlay */
+  .noise {
+    position: absolute;
+    inset: 0;
+    opacity: 0.015;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-size: 256px 256px;
+  }
+</style>
+</head>
+<body>
+  <div class="gradient-base"></div>
+  <div class="gold-glow"></div>
+  <div class="cross-pattern"></div>
+  <div class="top-light"></div>
+  <div class="bottom-shadow"></div>
+  <div class="corner corner-tl"></div>
+  <div class="corner corner-tr"></div>
+  <div class="corner corner-bl"></div>
+  <div class="corner corner-br"></div>
+  <div class="center-cross">
+    <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+      <path d="M85 15 L85 55 L45 55 L45 65 L15 65 L15 95 L45 95 L45 105 L15 105 L15 135 L45 135 L45 145 L85 145 L85 185 L115 185 L115 145 L155 145 L155 135 L185 135 L185 105 L155 105 L155 95 L185 95 L185 65 L155 65 L155 55 L115 55 L115 15 Z"
+        fill="#D4A574" opacity="0.5"/>
+    </svg>
+  </div>
+  <div class="vignette"></div>
+  <div class="noise"></div>
+</body>
+</html>

@@ -1,0 +1,211 @@
+name: "🎙️ Phase 1: Transcribe Amharic Voice"
+
+on:
+  push:
+    paths:
+      - 'input/**'
+
+# Cancel any in-progress runs for the same branch
+concurrency:
+  group: transcribe-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  transcribe:
+    name: "🔊 Whisper Transcription"
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: "📥 Checkout Repository"
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: "🔍 Detect Audio File"
+        id: detect
+        run: |
+          # Find the most recently added audio file in input/
+          AUDIO_FILE=$(find input/ -type f \( -name "*.mp3" -o -name "*.ogg" -o -name "*.wav" -o -name "*.m4a" -o -name "*.flac" \) | head -n 1)
+          
+          if [ -z "$AUDIO_FILE" ]; then
+            echo "❌ No audio file found in input/ directory"
+            echo "found=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          
+          echo "✅ Found audio file: $AUDIO_FILE"
+          echo "found=true" >> $GITHUB_OUTPUT
+          echo "file=$AUDIO_FILE" >> $GITHUB_OUTPUT
+          
+          # Get file size in MB
+          SIZE=$(du -m "$AUDIO_FILE" | cut -f1)
+          echo "📦 File size: ${SIZE}MB"
+          
+          if [ "$SIZE" -gt 100 ]; then
+            echo "⚠️ Warning: File is ${SIZE}MB — transcription may take a while"
+          fi
+
+      - name: "🐍 Set Up Python"
+        if: steps.detect.outputs.found == 'true'
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: "📦 Install Whisper"
+        if: steps.detect.outputs.found == 'true'
+        run: |
+          pip install --upgrade pip
+          pip install openai-whisper
+          # Install ffmpeg for audio processing
+          sudo apt-get update && sudo apt-get install -y ffmpeg
+
+      - name: "🎯 Transcribe with Whisper (Small Model)"
+        if: steps.detect.outputs.found == 'true'
+        run: |
+          python3 << 'PYTHON_SCRIPT'
+          import whisper
+          import json
+          import sys
+          import os
+
+          audio_file = "${{ steps.detect.outputs.file }}"
+          print(f"🎙️ Loading Whisper 'small' model...")
+          print(f"📂 Processing: {audio_file}")
+
+          try:
+              model = whisper.load_model("small")
+              
+              print("🔄 Transcribing Amharic audio (word-level timestamps)...")
+              result = model.transcribe(
+                  audio_file,
+                  language="am",
+                  word_timestamps=True,
+                  verbose=False
+              )
+              
+              # Extract word-level timestamps
+              words = []
+              for segment in result.get("segments", []):
+                  for word_info in segment.get("words", []):
+                      words.append({
+                          "word": word_info["word"].strip(),
+                          "start": round(word_info["start"], 3),
+                          "end": round(word_info["end"], 3)
+                      })
+              
+              # Build captions.json
+              captions_data = {
+                  "audio_file": audio_file,
+                  "language": "am",
+                  "full_text": result["text"].strip(),
+                  "segments": [
+                      {
+                          "id": seg["id"],
+                          "start": round(seg["start"], 3),
+                          "end": round(seg["end"], 3),
+                          "text": seg["text"].strip()
+                      }
+                      for seg in result.get("segments", [])
+                  ],
+                  "words": words,
+                  "model": "small",
+                  "total_duration": round(result["segments"][-1]["end"], 3) if result.get("segments") else 0
+              }
+              
+              # Write captions.json
+              with open("captions.json", "w", encoding="utf-8") as f:
+                  json.dump(captions_data, f, ensure_ascii=False, indent=2)
+              print(f"✅ captions.json written ({len(words)} words)")
+              
+              # Write human-readable captions_review.txt
+              with open("captions_review.txt", "w", encoding="utf-8") as f:
+                  f.write("═" * 60 + "\n")
+                  f.write("  EOTC Voice Studio — Amharic Transcription Review\n")
+                  f.write("═" * 60 + "\n\n")
+                  f.write(f"Audio: {audio_file}\n")
+                  f.write(f"Model: Whisper Small\n")
+                  f.write(f"Words: {len(words)}\n")
+                  f.write(f"Duration: {captions_data['total_duration']:.1f}s\n\n")
+                  f.write("─" * 60 + "\n")
+                  f.write("FULL TRANSCRIPTION:\n")
+                  f.write("─" * 60 + "\n\n")
+                  f.write(result["text"].strip() + "\n\n")
+                  f.write("─" * 60 + "\n")
+                  f.write("WORD-BY-WORD TIMESTAMPS:\n")
+                  f.write("(Edit any incorrect words below, keep the timestamps)\n")
+                  f.write("─" * 60 + "\n\n")
+                  
+                  for i, w in enumerate(words):
+                      f.write(f"[{w['start']:.3f} → {w['end']:.3f}]  {w['word']}\n")
+                  
+                  f.write("\n" + "─" * 60 + "\n")
+                  f.write("SEGMENTS:\n")
+                  f.write("─" * 60 + "\n\n")
+                  
+                  for seg in result.get("segments", []):
+                      f.write(f"[{seg['start']:.1f}s - {seg['end']:.1f}s]\n")
+                      f.write(f"  {seg['text'].strip()}\n\n")
+                  
+                  f.write("═" * 60 + "\n")
+                  f.write("✏️  Edit any mistakes above, then push to trigger Phase 2.\n")
+                  f.write("═" * 60 + "\n")
+              
+              print(f"✅ captions_review.txt written")
+              print(f"\n📊 Summary:")
+              print(f"   Full text: {result['text'][:100]}...")
+              print(f"   Words: {len(words)}")
+              print(f"   Duration: {captions_data['total_duration']:.1f}s")
+              
+          except Exception as e:
+              print(f"❌ Transcription failed: {e}")
+              sys.exit(1)
+          PYTHON_SCRIPT
+
+      - name: "📤 Commit Transcription Results"
+        if: steps.detect.outputs.found == 'true'
+        run: |
+          git config user.name "EOTC Voice Studio Bot"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          git add captions.json captions_review.txt
+          
+          if git diff --cached --quiet; then
+            echo "ℹ️ No changes to commit"
+          else
+            git commit -m "🎙️ Transcription complete — $(wc -w < captions_review.txt) words detected
+
+          Audio: ${{ steps.detect.outputs.file }}
+          Model: Whisper Small
+          
+          ✏️ Review captions_review.txt and fix any Amharic errors.
+          Then trigger 'Render Video' workflow for Phase 2."
+            
+            git push
+            echo "✅ Transcription committed and pushed!"
+          fi
+
+      - name: "📋 Job Summary"
+        if: steps.detect.outputs.found == 'true'
+        run: |
+          echo "## 🎙️ Transcription Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Detail | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Audio File | \`${{ steps.detect.outputs.file }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Model | Whisper Small |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Next Steps" >> $GITHUB_STEP_SUMMARY
+          echo "1. Review \`captions_review.txt\` for Amharic accuracy" >> $GITHUB_STEP_SUMMARY
+          echo "2. Fix any errors and push" >> $GITHUB_STEP_SUMMARY
+          echo "3. Go to **Actions → Render Video** and trigger manually" >> $GITHUB_STEP_SUMMARY
+
+      - name: "⚠️ No Audio Found"
+        if: steps.detect.outputs.found != 'true'
+        run: |
+          echo "## ⚠️ No Audio File Found" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Place an audio file (.mp3, .ogg, .wav, .m4a, .flac) in the \`input/\` folder and push." >> $GITHUB_STEP_SUMMARY
