@@ -9,3 +9,7 @@ Thumbs.db
 # Remotion build artifacts
 .remotion/
 dist/
+
+# Temp render files
+render-props.json
+public/audio.*

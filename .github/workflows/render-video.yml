@@ -13,11 +13,11 @@ on:
           - high
           - ultra
       title:
-        description: "Video intro title (optional)"
+        description: "Video intro title"
         required: false
         default: "EOTC Voice Studio"
+        type: string
 
-# Cancel any in-progress renders for the same branch
 concurrency:
   group: render-${{ github.ref }}
   cancel-in-progress: true
@@ -32,90 +32,135 @@ jobs:
     timeout-minutes: 60
 
     steps:
+      # ─────────────────────────────────────
+      # 1. Checkout
+      # ─────────────────────────────────────
       - name: "📥 Checkout Repository"
         uses: actions/checkout@v4
 
+      # ─────────────────────────────────────
+      # 2. Validate that captions + audio exist
+      # ─────────────────────────────────────
       - name: "🔍 Validate Inputs"
         id: validate
         run: |
+          echo ""
           echo "═══════════════════════════════════════════"
           echo "  🎬 EOTC Voice Studio — Remotion Pipeline"
           echo "═══════════════════════════════════════════"
           echo ""
 
-          # Check for captions
+          # Check captions
           if [ ! -f "captions_review.txt" ] && [ ! -f "captions.json" ]; then
-            echo "❌ No captions found! Run Phase 1 (Transcribe) first."
+            echo "❌ ERROR: No captions found!"
+            echo "   Run Phase 1 (Transcribe) first."
             exit 1
           fi
+          echo "✅ Captions found"
 
-          # Check for audio file
-          AUDIO_FILE=$(find input/ -type f \( -name "*.mp3" -o -name "*.ogg" -o -name "*.wav" -o -name "*.m4a" -o -name "*.flac" -o -name "*.aac" \) | head -n 1)
+          # Check audio
+          AUDIO_FILE=$(find input/ -type f \( -name "*.mp3" -o -name "*.ogg" -o -name "*.wav" -o -name "*.m4a" -o -name "*.flac" -o -name "*.aac" \) 2>/dev/null | head -n 1)
           if [ -z "$AUDIO_FILE" ]; then
-            echo "❌ No audio file found in input/"
+            echo "❌ ERROR: No audio file in input/"
             exit 1
           fi
-
-          echo "audio_file=$AUDIO_FILE" >> $GITHUB_OUTPUT
           echo "✅ Audio: $AUDIO_FILE"
+          echo "audio_file=$AUDIO_FILE" >> $GITHUB_OUTPUT
 
-          # Determine caption source
-          if [ -f "captions.json" ]; then
-            WORD_COUNT=$(python3 -c "import json; d=json.load(open('captions.json')); print(len(d.get('words',[])))")
-            echo "✅ Captions: captions.json ($WORD_COUNT words)"
-          fi
-
-          if [ -f "captions_review.txt" ]; then
-            echo "✅ Review file: captions_review.txt"
-          fi
-
-      - name: "📦 Setup Node.js"
+      # ─────────────────────────────────────
+      # 3. Setup Node.js
+      # ─────────────────────────────────────
+      - name: "📦 Setup Node.js 20"
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
+          node-version: "20"
 
+      # ─────────────────────────────────────
+      # 4. Install npm dependencies
+      # ─────────────────────────────────────
       - name: "📦 Install Dependencies"
         run: |
-          npm ci || npm install
-          echo ""
-          echo "🔧 Installed packages:"
-          npx remotion --version || echo "Remotion CLI ready"
+          npm ci 2>/dev/null || npm install
+          echo "✅ Dependencies installed"
 
-      - name: "🖥️ Install Chrome for Remotion"
-        run: |
-          # Remotion needs Chrome/Chromium for rendering
-          npx -y puppeteer browsers install chrome
-          echo "✅ Chrome installed for Remotion renderer"
-
+      # ─────────────────────────────────────
+      # 5. Install system fonts for Amharic
+      # ─────────────────────────────────────
       - name: "🔤 Install Amharic Fonts"
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y -qq fonts-noto-core fonts-noto-cjk 2>/dev/null
-          # Verify Amharic font availability
-          echo "🔤 Available Ethiopic fonts:"
-          fc-list | grep -i "Ethiopic" | head -5 || echo "  Using Google Fonts (loaded at render time)"
+          sudo apt-get install -y -qq fonts-noto-core 2>/dev/null || true
+          fc-list | grep -i "Ethiopic" | head -3 || echo "  Fonts loaded via Google Fonts at render time"
+          echo "✅ Fonts ready"
 
+      # ─────────────────────────────────────
+      # 6. Prepare render props
+      # ─────────────────────────────────────
+      - name: "📋 Prepare Render Props"
+        run: |
+          node prepare-render.js --title "${{ github.event.inputs.title || 'EOTC Voice Studio' }}"
+
+      # ─────────────────────────────────────
+      # 7. Render with Remotion CLI
+      # ─────────────────────────────────────
       - name: "🎬 Render with Remotion"
         run: |
-          node render-entry.js \
-            --quality "${{ github.event.inputs.quality || 'high' }}" \
-            --title "${{ github.event.inputs.title || 'EOTC Voice Studio' }}"
-        env:
-          REMOTION_CHROME_EXECUTABLE: /root/.cache/puppeteer/chrome/linux-*/chrome-linux64/chrome
+          QUALITY="${{ github.event.inputs.quality || 'high' }}"
+          echo "🎨 Quality preset: $QUALITY"
+          echo ""
 
-      - name: "📊 Video Info"
+          # Set quality flags
+          case "$QUALITY" in
+            fast)
+              EXTRA_FLAGS="--concurrency=4 --jpeg-quality=75 --log=warn"
+              ;;
+            high)
+              EXTRA_FLAGS="--concurrency=2 --jpeg-quality=90 --log=info"
+              ;;
+            ultra)
+              EXTRA_FLAGS="--concurrency=1 --jpeg-quality=100 --crf=14 --log=info"
+              ;;
+            *)
+              EXTRA_FLAGS="--concurrency=2 --jpeg-quality=90 --log=info"
+              ;;
+          esac
+
+          echo "🎬 Running: npx remotion render $EXTRA_FLAGS"
+          echo ""
+
+          npx remotion render \
+            src/index.jsx \
+            EOTCVideo \
+            output/tiktok_ready.mp4 \
+            --props=./render-props.json \
+            $EXTRA_FLAGS
+
+          echo ""
+          echo "✅ Render complete!"
+
+      # ─────────────────────────────────────
+      # 8. Verify output
+      # ─────────────────────────────────────
+      - name: "📊 Verify Output"
         id: info
         run: |
-          if [ -f "output/tiktok_ready.mp4" ]; then
-            SIZE=$(du -m output/tiktok_ready.mp4 | cut -f1)
-            echo "size=${SIZE}" >> $GITHUB_OUTPUT
-            echo "✅ Output: output/tiktok_ready.mp4 (${SIZE}MB)"
-          else
-            echo "❌ Render output not found!"
+          if [ ! -f "output/tiktok_ready.mp4" ]; then
+            echo "❌ ERROR: output/tiktok_ready.mp4 not found!"
+            ls -la output/ || true
             exit 1
           fi
 
+          SIZE=$(du -m output/tiktok_ready.mp4 | cut -f1)
+          BYTES=$(stat -c%s output/tiktok_ready.mp4)
+          echo "size=${SIZE}" >> $GITHUB_OUTPUT
+          echo ""
+          echo "✅ Output verified:"
+          echo "   📁 File: output/tiktok_ready.mp4"
+          echo "   📦 Size: ${SIZE}MB ($BYTES bytes)"
+
+      # ─────────────────────────────────────
+      # 9. Upload artifact
+      # ─────────────────────────────────────
       - name: "📤 Upload Video Artifact"
         uses: actions/upload-artifact@v4
         with:
@@ -123,50 +168,79 @@ jobs:
           path: output/tiktok_ready.mp4
           retention-days: 30
 
+      # ─────────────────────────────────────
+      # 10. Send to Telegram (optional)
+      # ─────────────────────────────────────
       - name: "📱 Send to Telegram"
-        if: ${{ env.TELEGRAM_BOT_TOKEN != '' && env.TELEGRAM_CHAT_ID != '' }}
+        if: ${{ secrets.TELEGRAM_BOT_TOKEN != '' }}
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
           FILE_SIZE=${{ steps.info.outputs.size }}
-          echo "📦 Video size: ${FILE_SIZE}MB"
 
-          if [ "$FILE_SIZE" -gt 50 ]; then
-            echo "⚠️ Video exceeds Telegram's 50MB limit. Skipping upload."
-            echo "Download from GitHub Artifacts instead."
-          else
-            curl -s -X POST \
-              "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendVideo" \
-              -F "chat_id=${TELEGRAM_CHAT_ID}" \
-              -F "video=@output/tiktok_ready.mp4" \
-              -F "caption=🎬 EOTC Voice Studio — Remotion render complete!
-Quality: ${{ github.event.inputs.quality || 'high' }}
-Size: ${FILE_SIZE}MB" \
-              -F "parse_mode=HTML" \
-              && echo "✅ Sent to Telegram!" \
-              || echo "⚠️ Telegram send failed (non-critical)"
+          if [ -z "$TELEGRAM_BOT_TOKEN" ] || [ -z "$TELEGRAM_CHAT_ID" ]; then
+            echo "⏭️ Telegram not configured, skipping"
+            exit 0
           fi
 
-      - name: "📋 Job Summary"
+          if [ "$FILE_SIZE" -gt 50 ]; then
+            echo "⚠️ Video is ${FILE_SIZE}MB (exceeds Telegram 50MB limit)"
+            echo "   Download from GitHub Artifacts instead."
+            exit 0
+          fi
+
+          echo "📤 Sending to Telegram..."
+          curl -s -X POST \
+            "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendVideo" \
+            -F "chat_id=${TELEGRAM_CHAT_ID}" \
+            -F "video=@output/tiktok_ready.mp4" \
+            -F "caption=🎬 EOTC Voice Studio — Remotion render complete!
+Quality: ${{ github.event.inputs.quality || 'high' }}
+Size: ${FILE_SIZE}MB" \
+            && echo "✅ Sent to Telegram!" \
+            || echo "⚠️ Telegram failed (non-critical)"
+
+      # ─────────────────────────────────────
+      # 11. Cleanup temp files
+      # ─────────────────────────────────────
+      - name: "🧹 Cleanup"
+        if: always()
         run: |
-          echo "## 🎬 Remotion Video Rendered Successfully!" >> $GITHUB_STEP_SUMMARY
+          rm -f render-props.json
+          rm -f public/audio.*
+          echo "✅ Cleaned up temp files"
+
+      # ─────────────────────────────────────
+      # 12. Job summary
+      # ─────────────────────────────────────
+      - name: "📋 Job Summary"
+        if: always()
+        run: |
+          echo "## 🎬 EOTC Voice Studio — Remotion Render" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Detail | Value |" >> $GITHUB_STEP_SUMMARY
-          echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
-          echo "| 🎵 Audio | \`${{ steps.validate.outputs.audio_file }}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| 🎨 Quality | ${{ github.event.inputs.quality || 'high' }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| 📐 Resolution | 1080×1920 (9:16) |" >> $GITHUB_STEP_SUMMARY
-          echo "| 🎞️ Engine | Remotion 4.0 |" >> $GITHUB_STEP_SUMMARY
-          echo "| 📦 File Size | ${{ steps.info.outputs.size }}MB |" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### ✨ Features" >> $GITHUB_STEP_SUMMARY
-          echo "- Animated cinematic background with gradient drift" >> $GITHUB_STEP_SUMMARY
-          echo "- Floating golden particle field" >> $GITHUB_STEP_SUMMARY
-          echo "- Volumetric god-ray light effects" >> $GITHUB_STEP_SUMMARY
-          echo "- Word-by-word animated captions with gold highlight" >> $GITHUB_STEP_SUMMARY
-          echo "- Spring-animated intro & outro sequences" >> $GITHUB_STEP_SUMMARY
-          echo "- Ethiopian Orthodox cross watermark" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### 📥 Download" >> $GITHUB_STEP_SUMMARY
-          echo "Download the video from the **Artifacts** section above." >> $GITHUB_STEP_SUMMARY
+          if [ -f "output/tiktok_ready.mp4" ]; then
+            echo "### ✅ Render Successful" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "| Detail | Value |" >> $GITHUB_STEP_SUMMARY
+            echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
+            echo "| 🎵 Audio | \`${{ steps.validate.outputs.audio_file }}\` |" >> $GITHUB_STEP_SUMMARY
+            echo "| 🎨 Quality | ${{ github.event.inputs.quality || 'high' }} |" >> $GITHUB_STEP_SUMMARY
+            echo "| 📐 Resolution | 1080×1920 (9:16) |" >> $GITHUB_STEP_SUMMARY
+            echo "| 🎞️ Engine | Remotion 4.0 |" >> $GITHUB_STEP_SUMMARY
+            echo "| 📦 Size | ${{ steps.info.outputs.size }}MB |" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### ✨ Visual Effects" >> $GITHUB_STEP_SUMMARY
+            echo "- Cinematic animated gradient background" >> $GITHUB_STEP_SUMMARY
+            echo "- Floating golden particle field" >> $GITHUB_STEP_SUMMARY
+            echo "- Volumetric god-ray light effects" >> $GITHUB_STEP_SUMMARY
+            echo "- Word-by-word animated captions with gold glow" >> $GITHUB_STEP_SUMMARY
+            echo "- Spring-animated intro & outro sequences" >> $GITHUB_STEP_SUMMARY
+            echo "- Ethiopian Orthodox cross watermark" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### 📥 Download" >> $GITHUB_STEP_SUMMARY
+            echo "Download from the **Artifacts** section above." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "### ❌ Render Failed" >> $GITHUB_STEP_SUMMARY
+            echo "Check the logs above for details." >> $GITHUB_STEP_SUMMARY
+          fi

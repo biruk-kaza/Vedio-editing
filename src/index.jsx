@@ -2,15 +2,15 @@
  * EOTC Voice Studio — Remotion Entry Point
  * 
  * Registers the EOTCVideo composition with Remotion.
- * Input props (words, audioSrc, title) are passed at render time
- * via --props flag or through the render-entry.js script.
+ * Uses calculateMetadata to dynamically set video duration
+ * based on the audio length passed via props.
  */
 import React from 'react';
-import { Composition, staticFile } from 'remotion';
+import { Composition } from 'remotion';
 import { EOTCVideo } from './Video.jsx';
 import { theme } from './utils/theme.js';
 
-// Default demo words for Remotion Studio preview
+// Demo words for Remotion Studio preview
 const DEMO_WORDS = [
   { word: 'በስመ', start: 0.0, end: 0.8 },
   { word: 'አብ', start: 0.8, end: 1.2 },
@@ -28,7 +28,8 @@ export const RemotionRoot = () => {
       <Composition
         id="EOTCVideo"
         component={EOTCVideo}
-        durationInFrames={theme.video.fps * 30} // Default 30s, overridden at render
+        // Default duration for Studio preview (overridden by calculateMetadata)
+        durationInFrames={theme.video.fps * 15}
         fps={theme.video.fps}
         width={theme.video.width}
         height={theme.video.height}
@@ -36,6 +37,19 @@ export const RemotionRoot = () => {
           words: DEMO_WORDS,
           audioFileName: '',
           title: 'EOTC Voice Studio',
+          totalDuration: 5.2,
+          totalSeconds: 11.7,
+        }}
+        calculateMetadata={async ({ props }) => {
+          // Dynamically calculate video duration from props
+          const fps = theme.video.fps;
+          const totalSec = props.totalSeconds || 15;
+          return {
+            durationInFrames: Math.ceil(totalSec * fps),
+            fps,
+            width: theme.video.width,
+            height: theme.video.height,
+          };
         }}
       />
     </>

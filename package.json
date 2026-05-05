@@ -4,35 +4,24 @@
   "description": "EOTC Voice Studio — Amharic voice-to-video pipeline with Remotion motion graphics on GitHub Actions",
   "type": "module",
   "scripts": {
-    "start": "npx remotion studio",
-    "build": "npx remotion render src/index.jsx EOTCVideo output/tiktok_ready.mp4",
-    "render": "node render-entry.js",
     "studio": "npx remotion studio src/index.jsx",
-    "transcribe": "node src/transcribe.js",
-    "test": "node src/test.js"
+    "prepare": "node prepare-render.js",
+    "render": "npm run prepare && npx remotion render src/index.jsx EOTCVideo output/tiktok_ready.mp4 --props=./render-props.json --log=verbose",
+    "render:fast": "npm run prepare && npx remotion render src/index.jsx EOTCVideo output/tiktok_ready.mp4 --props=./render-props.json --concurrency=4 --jpeg-quality=75",
+    "render:ultra": "npm run prepare && npx remotion render src/index.jsx EOTCVideo output/tiktok_ready.mp4 --props=./render-props.json --concurrency=1 --jpeg-quality=100 --crf=14",
+    "transcribe": "node src/transcribe.js"
   },
   "keywords": [
-    "eotc",
-    "amharic",
-    "whisper",
-    "remotion",
-    "tiktok",
-    "video",
-    "motion-graphics",
-    "orthodox"
+    "eotc", "amharic", "whisper", "remotion",
+    "tiktok", "video", "motion-graphics", "orthodox"
   ],
   "author": "EOTC Voice Studio",
   "license": "MIT",
   "dependencies": {
-    "3": "^2.1.0",
-    "@remotion/bundler": "4.0.242",
     "@remotion/cli": "4.0.242",
-    "@remotion/media-utils": "4.0.242",
-    "@remotion/player": "4.0.242",
-    "@remotion/renderer": "4.0.242",
+    "remotion": "4.0.242",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "remotion": "4.0.242"
+    "react-dom": "^18.3.1"
   },
   "engines": {
     "node": ">=20.0.0"
