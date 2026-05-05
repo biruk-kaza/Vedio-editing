@@ -196,8 +196,8 @@ jobs:
             -F "chat_id=${TELEGRAM_CHAT_ID}" \
             -F "video=@output/tiktok_ready.mp4" \
             -F "caption=🎬 EOTC Voice Studio — Remotion render complete!
-Quality: ${{ github.event.inputs.quality || 'high' }}
-Size: ${FILE_SIZE}MB" \
+            Quality: ${{ github.event.inputs.quality || 'high' }}
+            Size: ${FILE_SIZE}MB" \
             && echo "✅ Sent to Telegram!" \
             || echo "⚠️ Telegram failed (non-critical)"
 
