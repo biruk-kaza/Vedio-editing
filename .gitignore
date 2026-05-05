@@ -5,3 +5,7 @@ output/*.ass
 *.log
 .DS_Store
 Thumbs.db
+
+# Remotion build artifacts
+.remotion/
+dist/
