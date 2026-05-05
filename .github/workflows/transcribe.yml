@@ -69,7 +69,7 @@ jobs:
           # ─── Config ───
           AUDIO_FILE = "${{ steps.detect.outputs.file }}"
           API_KEY = os.environ.get("GEMINI_API_KEY", "")
-          GEMINI_MODEL = "gemini-2.0-flash"
+          GEMINI_MODEL = "gemini-1.5-flash"
           API_URL = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent?key={API_KEY}"
 
           print("")
