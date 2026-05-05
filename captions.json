@@ -47,8 +47,8 @@
     { "word": "ድመቷ", "start": 22.4, "end": 22.9 },
     { "word": "የማይለያዩ", "start": 22.9, "end": 23.7 },
     { "word": "ምርጥ", "start": 23.7, "end": 24.1 },
-    { "word": "ጓደኛማቾች", "start": 24.1, "end": 24.9 },
-    { "word": "ሆኑ", "start": 24.9, "end": 25.5 }
+    { "word": "ጓደኛማቾች", "start": 24.1, "end": 25 },
+    { "word": "ሆኑ", "start": 25, "end": 25.5 }
   ],
   "model": "manual",
   "total_duration": 25.5
