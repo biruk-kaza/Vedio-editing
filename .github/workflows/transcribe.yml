@@ -1,4 +1,4 @@
-name: "🎙️ Phase 1: Transcribe Amharic Voice"
+name: "🎙️ Phase 1: Transcribe (Google Cloud STT)"
 
 on:
   push:
@@ -6,7 +6,6 @@ on:
       - 'input/**'
   workflow_dispatch:
 
-# Cancel any in-progress runs for the same branch
 concurrency:
   group: transcribe-${{ github.ref }}
   cancel-in-progress: true
@@ -16,9 +15,9 @@ permissions:
 
 jobs:
   transcribe:
-    name: "🔊 Whisper Transcription"
+    name: "🔊 Google Cloud Transcription"
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 15
 
     steps:
       - name: "📥 Checkout Repository"
@@ -29,142 +28,279 @@ jobs:
       - name: "🔍 Detect Audio File"
         id: detect
         run: |
-          # Find the most recently added audio file in input/
-          AUDIO_FILE=$(find input/ -type f \( -name "*.mp3" -o -name "*.ogg" -o -name "*.wav" -o -name "*.m4a" -o -name "*.flac" \) | head -n 1)
-          
+          AUDIO_FILE=$(find input/ -type f \( -name "*.mp3" -o -name "*.ogg" -o -name "*.wav" -o -name "*.m4a" -o -name "*.flac" -o -name "*.aac" \) 2>/dev/null | head -n 1)
+
           if [ -z "$AUDIO_FILE" ]; then
-            echo "❌ No audio file found in input/ directory"
+            echo "❌ No audio file found in input/"
             echo "found=false" >> $GITHUB_OUTPUT
             exit 0
           fi
-          
-          echo "✅ Found audio file: $AUDIO_FILE"
+
+          echo "✅ Found: $AUDIO_FILE"
           echo "found=true" >> $GITHUB_OUTPUT
           echo "file=$AUDIO_FILE" >> $GITHUB_OUTPUT
-          
-          # Get file size in MB
-          SIZE=$(du -m "$AUDIO_FILE" | cut -f1)
-          echo "📦 File size: ${SIZE}MB"
-          
-          if [ "$SIZE" -gt 100 ]; then
-            echo "⚠️ Warning: File is ${SIZE}MB — transcription may take a while"
+
+      - name: "🔑 Setup Google Cloud Credentials"
+        if: steps.detect.outputs.found == 'true'
+        run: |
+          if [ -z "${{ secrets.GCP_SA_KEY }}" ]; then
+            echo "❌ ERROR: GCP_SA_KEY secret not set!"
+            echo "   Go to repo Settings → Secrets → Actions"
+            echo "   Add a secret named GCP_SA_KEY with your"
+            echo "   Google Cloud service account JSON key."
+            echo ""
+            echo "   Setup guide:"
+            echo "   1. Go to console.cloud.google.com"
+            echo "   2. Enable 'Cloud Speech-to-Text API'"
+            echo "   3. Create a Service Account"
+            echo "   4. Download JSON key"
+            echo "   5. Paste entire JSON as GCP_SA_KEY secret"
+            exit 1
           fi
 
-      - name: "🐍 Set Up Python"
+          echo '${{ secrets.GCP_SA_KEY }}' > /tmp/gcp-key.json
+          echo "GOOGLE_APPLICATION_CREDENTIALS=/tmp/gcp-key.json" >> $GITHUB_ENV
+          echo "✅ Google Cloud credentials configured"
+
+      - name: "🐍 Setup Python"
         if: steps.detect.outputs.found == 'true'
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
-      - name: "📦 Install Whisper"
+      - name: "📦 Install Dependencies"
         if: steps.detect.outputs.found == 'true'
         run: |
           pip install --upgrade pip
-          pip install openai-whisper
-          # Install ffmpeg for audio processing
-          sudo apt-get update && sudo apt-get install -y ffmpeg
+          pip install google-cloud-speech
+          sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
+          echo "✅ google-cloud-speech + ffmpeg installed"
 
-      - name: "🎯 Transcribe with Whisper (Medium Model)"
+      - name: "🎯 Transcribe with Google Cloud STT"
         if: steps.detect.outputs.found == 'true'
         run: |
           python3 << 'PYTHON_SCRIPT'
-          import whisper
           import json
           import sys
           import os
+          import subprocess
+          import time
 
-          audio_file = "${{ steps.detect.outputs.file }}"
-          print(f"🎙️ Loading Whisper 'medium' model for highly accurate Amharic transcription...")
-          print(f"📂 Processing: {audio_file}")
+          # ─── Config ───
+          AUDIO_FILE = "${{ steps.detect.outputs.file }}"
+          LANGUAGE = "am-ET"
+          FLAC_PATH = "/tmp/audio_converted.flac"
+          SAMPLE_RATE = 16000
+
+          print("")
+          print("╔══════════════════════════════════════════════════════╗")
+          print("║   🎙️ EOTC Voice Studio — Google Cloud STT           ║")
+          print("╚══════════════════════════════════════════════════════╝")
+          print("")
+          print(f"📂 Audio: {AUDIO_FILE}")
+          print(f"🌍 Language: {LANGUAGE} (Amharic)")
+          print("")
+
+          # ─── Step 1: Convert to FLAC 16kHz mono ───
+          print("🔄 Converting audio to FLAC 16kHz mono...")
+          try:
+              result = subprocess.run([
+                  "ffmpeg", "-y", "-i", AUDIO_FILE,
+                  "-ac", "1",                    # mono
+                  "-ar", str(SAMPLE_RATE),        # 16kHz
+                  "-sample_fmt", "s16",           # 16-bit
+                  FLAC_PATH
+              ], capture_output=True, text=True, timeout=120)
+
+              if result.returncode != 0:
+                  print(f"❌ FFmpeg conversion failed: {result.stderr[-500:]}")
+                  sys.exit(1)
+
+              file_size = os.path.getsize(FLAC_PATH)
+              print(f"   ✅ Converted: {file_size / 1024 / 1024:.1f}MB")
+          except Exception as e:
+              print(f"❌ Audio conversion failed: {e}")
+              sys.exit(1)
+
+          # ─── Step 2: Get audio duration ───
+          try:
+              probe = subprocess.run([
+                  "ffprobe", "-v", "quiet",
+                  "-show_entries", "format=duration",
+                  "-of", "default=noprint_wrappers=1:nokey=1",
+                  FLAC_PATH
+              ], capture_output=True, text=True)
+              duration = float(probe.stdout.strip())
+              print(f"   ⏱️  Duration: {duration:.1f}s")
+          except:
+              duration = 0
+              print("   ⚠️ Could not detect duration, proceeding anyway")
+
+          # ─── Step 3: Read audio content ───
+          with open(FLAC_PATH, "rb") as f:
+              audio_content = f.read()
+
+          print(f"   📦 Audio size: {len(audio_content) / 1024 / 1024:.2f}MB")
+
+          if len(audio_content) > 10 * 1024 * 1024:
+              print("❌ Audio file too large for inline transcription (>10MB)")
+              print("   Try a shorter audio file or lower quality source.")
+              sys.exit(1)
+
+          # ─── Step 4: Call Google Cloud STT ───
+          print("")
+          print("🔄 Sending to Google Cloud Speech-to-Text...")
+          print(f"   Model: default | Language: {LANGUAGE}")
 
           try:
-              model = whisper.load_model("medium")
-              
-              print("🔄 Transcribing Amharic audio (word-level timestamps)...")
-              result = model.transcribe(
-                  audio_file,
-                  language="am",
-                  word_timestamps=True,
-                  verbose=False,
-                  initial_prompt="በስመ አብ ወወልድ ወመንፈስ ቅዱስ አሐዱ አምላክ አሜን። ይህ በአማርኛ የተነገረ ኦርቶዶክሳዊ ትምህርት ነው።"
+              from google.cloud import speech
+
+              client = speech.SpeechClient()
+
+              audio = speech.RecognitionAudio(content=audio_content)
+              config = speech.RecognitionConfig(
+                  encoding=speech.RecognitionConfig.AudioEncoding.FLAC,
+                  sample_rate_hertz=SAMPLE_RATE,
+                  language_code=LANGUAGE,
+                  enable_word_time_offsets=True,
+                  enable_automatic_punctuation=True,
+                  model="default",
+                  audio_channel_count=1,
               )
-              
-              # Extract word-level timestamps
-              words = []
-              for segment in result.get("segments", []):
-                  for word_info in segment.get("words", []):
-                      words.append({
-                          "word": word_info["word"].strip(),
-                          "start": round(word_info["start"], 3),
-                          "end": round(word_info["end"], 3)
-                      })
-              
-              # Build captions.json
-              captions_data = {
-                  "audio_file": audio_file,
-                  "language": "am",
-                  "full_text": result["text"].strip(),
-                  "segments": [
-                      {
-                          "id": seg["id"],
-                          "start": round(seg["start"], 3),
-                          "end": round(seg["end"], 3),
-                          "text": seg["text"].strip()
-                      }
-                      for seg in result.get("segments", [])
-                  ],
-                  "words": words,
-                  "model": "small",
-                  "total_duration": round(result["segments"][-1]["end"], 3) if result.get("segments") else 0
-              }
-              
-              # Write captions.json
-              with open("captions.json", "w", encoding="utf-8") as f:
-                  json.dump(captions_data, f, ensure_ascii=False, indent=2)
-              print(f"✅ captions.json written ({len(words)} words)")
-              
-              # Write human-readable captions_review.txt
-              with open("captions_review.txt", "w", encoding="utf-8") as f:
-                  f.write("═" * 60 + "\n")
-                  f.write("  EOTC Voice Studio — Amharic Transcription Review\n")
-                  f.write("═" * 60 + "\n\n")
-                  f.write(f"Audio: {audio_file}\n")
-                  f.write(f"Model: Whisper Medium\n")
-                  f.write(f"Words: {len(words)}\n")
-                  f.write(f"Duration: {captions_data['total_duration']:.1f}s\n\n")
-                  f.write("─" * 60 + "\n")
-                  f.write("FULL TRANSCRIPTION:\n")
-                  f.write("─" * 60 + "\n\n")
-                  f.write(result["text"].strip() + "\n\n")
-                  f.write("─" * 60 + "\n")
-                  f.write("WORD-BY-WORD TIMESTAMPS:\n")
-                  f.write("(Edit any incorrect words below, keep the timestamps)\n")
-                  f.write("─" * 60 + "\n\n")
-                  
-                  for i, w in enumerate(words):
-                      f.write(f"[{w['start']:.3f} → {w['end']:.3f}]  {w['word']}\n")
-                  
-                  f.write("\n" + "─" * 60 + "\n")
-                  f.write("SEGMENTS:\n")
-                  f.write("─" * 60 + "\n\n")
-                  
-                  for seg in result.get("segments", []):
-                      f.write(f"[{seg['start']:.1f}s - {seg['end']:.1f}s]\n")
-                      f.write(f"  {seg['text'].strip()}\n\n")
-                  
-                  f.write("═" * 60 + "\n")
-                  f.write("✏️  Edit any mistakes above, then push to trigger Phase 2.\n")
-                  f.write("═" * 60 + "\n")
-              
-              print(f"✅ captions_review.txt written")
-              print(f"\n📊 Summary:")
-              print(f"   Full text: {result['text'][:100]}...")
-              print(f"   Words: {len(words)}")
-              print(f"   Duration: {captions_data['total_duration']:.1f}s")
-              
+
+              start_time = time.time()
+
+              if duration > 0 and duration < 55:
+                  # Synchronous for short audio
+                  print("   📡 Using synchronous recognition...")
+                  response = client.recognize(config=config, audio=audio)
+              else:
+                  # Async for longer audio
+                  print("   📡 Using async long-running recognition...")
+                  operation = client.long_running_recognize(config=config, audio=audio)
+                  print("   ⏳ Waiting for Google Cloud to process...")
+                  response = operation.result(timeout=600)
+
+              elapsed = time.time() - start_time
+              print(f"   ✅ Transcription received ({elapsed:.1f}s)")
+
           except Exception as e:
-              print(f"❌ Transcription failed: {e}")
+              print(f"❌ Google Cloud STT failed: {e}")
+              print("")
+              print("   Possible fixes:")
+              print("   - Check GCP_SA_KEY secret is valid JSON")
+              print("   - Ensure Speech-to-Text API is enabled")
+              print("   - Check service account has proper permissions")
               sys.exit(1)
+
+          # ─── Step 5: Extract words and timestamps ───
+          words = []
+          full_text_parts = []
+
+          for result in response.results:
+              if not result.alternatives:
+                  continue
+              alt = result.alternatives[0]
+              full_text_parts.append(alt.transcript)
+
+              for word_info in alt.words:
+                  words.append({
+                      "word": word_info.word,
+                      "start": round(word_info.start_time.total_seconds(), 3),
+                      "end": round(word_info.end_time.total_seconds(), 3),
+                  })
+
+          full_text = " ".join(full_text_parts).strip()
+
+          if not words:
+              print("❌ No words detected in the audio!")
+              print("   The audio may be silent or in an unsupported format.")
+              sys.exit(1)
+
+          total_duration = words[-1]["end"] if words else duration
+
+          print(f"")
+          print(f"📊 Results:")
+          print(f"   📝 Words: {len(words)}")
+          print(f"   ⏱️  Duration: {total_duration:.1f}s")
+          print(f"   📄 Text preview: {full_text[:120]}...")
+
+          # ─── Step 6: Write captions.json ───
+          captions_data = {
+              "audio_file": AUDIO_FILE,
+              "language": "am",
+              "full_text": full_text,
+              "segments": [],
+              "words": words,
+              "model": "google-cloud-stt",
+              "total_duration": round(total_duration, 3),
+          }
+
+          # Build segments (group by ~5 second chunks)
+          current_seg = {"id": 0, "start": 0, "end": 0, "text": "", "words": []}
+          seg_id = 0
+          for w in words:
+              current_seg["words"].append(w["word"])
+              current_seg["end"] = w["end"]
+              if not current_seg["text"]:
+                  current_seg["start"] = w["start"]
+
+              if w["end"] - current_seg["start"] >= 5.0 or w == words[-1]:
+                  current_seg["text"] = " ".join(current_seg["words"])
+                  captions_data["segments"].append({
+                      "id": seg_id,
+                      "start": round(current_seg["start"], 3),
+                      "end": round(current_seg["end"], 3),
+                      "text": current_seg["text"],
+                  })
+                  seg_id += 1
+                  current_seg = {"id": 0, "start": 0, "end": 0, "text": "", "words": []}
+
+          with open("captions.json", "w", encoding="utf-8") as f:
+              json.dump(captions_data, f, ensure_ascii=False, indent=2)
+          print(f"   ✅ captions.json written")
+
+          # ─── Step 7: Write human-readable review file ───
+          with open("captions_review.txt", "w", encoding="utf-8") as f:
+              f.write("═" * 60 + "\n")
+              f.write("  EOTC Voice Studio — Amharic Transcription Review\n")
+              f.write("  Engine: Google Cloud Speech-to-Text\n")
+              f.write("═" * 60 + "\n\n")
+              f.write(f"Audio: {AUDIO_FILE}\n")
+              f.write(f"Language: Amharic (am-ET)\n")
+              f.write(f"Words: {len(words)}\n")
+              f.write(f"Duration: {total_duration:.1f}s\n\n")
+              f.write("─" * 60 + "\n")
+              f.write("FULL TRANSCRIPTION:\n")
+              f.write("─" * 60 + "\n\n")
+              f.write(full_text + "\n\n")
+              f.write("─" * 60 + "\n")
+              f.write("WORD-BY-WORD TIMESTAMPS:\n")
+              f.write("(Edit any incorrect words, keep the timestamps)\n")
+              f.write("─" * 60 + "\n\n")
+
+              for w in words:
+                  f.write(f"[{w['start']:.3f} → {w['end']:.3f}]  {w['word']}\n")
+
+              f.write("\n" + "─" * 60 + "\n")
+              f.write("SEGMENTS:\n")
+              f.write("─" * 60 + "\n\n")
+
+              for seg in captions_data["segments"]:
+                  f.write(f"[{seg['start']:.1f}s - {seg['end']:.1f}s]\n")
+                  f.write(f"  {seg['text']}\n\n")
+
+              f.write("═" * 60 + "\n")
+              f.write("✏️  Edit any mistakes, then trigger Phase 2 (Render).\n")
+              f.write("═" * 60 + "\n")
+
+          print(f"   ✅ captions_review.txt written")
+          print("")
+          print("╔══════════════════════════════════════════════════════╗")
+          print("║   ✅ TRANSCRIPTION COMPLETE                         ║")
+          print("╚══════════════════════════════════════════════════════╝")
+          print("")
+
           PYTHON_SCRIPT
 
       - name: "📤 Commit Transcription Results"
@@ -172,38 +308,56 @@ jobs:
         run: |
           git config user.name "EOTC Voice Studio Bot"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          
+
           git add captions.json captions_review.txt
-          
+
           if git diff --cached --quiet; then
             echo "ℹ️ No changes to commit"
           else
-            git commit -m "🎙️ Transcription complete — $(wc -w < captions_review.txt) words detected
+            WORD_COUNT=$(python3 -c "import json; d=json.load(open('captions.json')); print(len(d.get('words',[])))")
+            git commit -m "🎙️ Google Cloud STT — $WORD_COUNT words transcribed
 
           Audio: ${{ steps.detect.outputs.file }}
-          Model: Whisper Medium
-          
-          ✏️ Review captions_review.txt and fix any Amharic errors.
-          Then trigger 'Render Video' workflow for Phase 2."
-            
+          Engine: Google Cloud Speech-to-Text (am-ET)
+
+          ✏️ Review captions_review.txt for accuracy.
+          Then trigger Phase 2 (Render Video) workflow."
+
             git push
             echo "✅ Transcription committed and pushed!"
           fi
 
+      - name: "🧹 Cleanup Credentials"
+        if: always()
+        run: |
+          rm -f /tmp/gcp-key.json
+          echo "✅ Credentials cleaned up"
+
       - name: "📋 Job Summary"
         if: steps.detect.outputs.found == 'true'
         run: |
-          echo "## 🎙️ Transcription Complete" >> $GITHUB_STEP_SUMMARY
+          echo "## 🎙️ Transcription Complete (Google Cloud STT)" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Detail | Value |" >> $GITHUB_STEP_SUMMARY
-          echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Audio File | \`${{ steps.detect.outputs.file }}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| Model | Whisper Medium |" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ -f "captions.json" ]; then
+            WORD_COUNT=$(python3 -c "import json; d=json.load(open('captions.json')); print(len(d.get('words',[])))")
+            DURATION=$(python3 -c "import json; d=json.load(open('captions.json')); print(f\"{d.get('total_duration',0):.1f}\")")
+            PREVIEW=$(python3 -c "import json; d=json.load(open('captions.json')); print(d.get('full_text','')[:200])")
+            echo "| Detail | Value |" >> $GITHUB_STEP_SUMMARY
+            echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
+            echo "| 🎵 Audio | \`${{ steps.detect.outputs.file }}\` |" >> $GITHUB_STEP_SUMMARY
+            echo "| 🌍 Engine | Google Cloud Speech-to-Text |" >> $GITHUB_STEP_SUMMARY
+            echo "| 🌍 Language | Amharic (am-ET) |" >> $GITHUB_STEP_SUMMARY
+            echo "| 📝 Words | $WORD_COUNT |" >> $GITHUB_STEP_SUMMARY
+            echo "| ⏱️ Duration | ${DURATION}s |" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### 📄 Transcription Preview" >> $GITHUB_STEP_SUMMARY
+            echo "> $PREVIEW" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+          fi
           echo "### Next Steps" >> $GITHUB_STEP_SUMMARY
-          echo "1. Review \`captions_review.txt\` for Amharic accuracy" >> $GITHUB_STEP_SUMMARY
+          echo "1. Review \`captions_review.txt\` for accuracy" >> $GITHUB_STEP_SUMMARY
           echo "2. Fix any errors and push" >> $GITHUB_STEP_SUMMARY
-          echo "3. Go to **Actions → Render Video** and trigger manually" >> $GITHUB_STEP_SUMMARY
+          echo "3. Go to **Actions → Phase 2: Render Video** and trigger" >> $GITHUB_STEP_SUMMARY
 
       - name: "⚠️ No Audio Found"
         if: steps.detect.outputs.found != 'true'
