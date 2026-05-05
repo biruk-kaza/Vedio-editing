@@ -6,7 +6,7 @@
  * based on the audio length passed via props.
  */
 import React from 'react';
-import { Composition } from 'remotion';
+import { Composition, registerRoot } from 'remotion';
 import { EOTCVideo } from './Video.jsx';
 import { theme } from './utils/theme.js';
 
@@ -55,3 +55,5 @@ export const RemotionRoot = () => {
     </>
   );
 };
+
+registerRoot(RemotionRoot);
