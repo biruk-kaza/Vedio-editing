@@ -5,10 +5,10 @@
   "type": "module",
   "scripts": {
     "studio": "npx remotion studio src/index.jsx",
-    "prepare": "node prepare-render.js",
-    "render": "npm run prepare && npx remotion render src/index.jsx EOTCVideo output/tiktok_ready.mp4 --props=./render-props.json --log=verbose",
-    "render:fast": "npm run prepare && npx remotion render src/index.jsx EOTCVideo output/tiktok_ready.mp4 --props=./render-props.json --concurrency=4 --jpeg-quality=75",
-    "render:ultra": "npm run prepare && npx remotion render src/index.jsx EOTCVideo output/tiktok_ready.mp4 --props=./render-props.json --concurrency=1 --jpeg-quality=100 --crf=14",
+    "prep": "node prepare-render.js",
+    "render": "npm run prep && npx remotion render src/index.jsx EOTCVideo output/tiktok_ready.mp4 --props=./render-props.json --log=verbose",
+    "render:fast": "npm run prep && npx remotion render src/index.jsx EOTCVideo output/tiktok_ready.mp4 --props=./render-props.json --concurrency=4 --jpeg-quality=75",
+    "render:ultra": "npm run prep && npx remotion render src/index.jsx EOTCVideo output/tiktok_ready.mp4 --props=./render-props.json --concurrency=1 --jpeg-quality=100 --crf=14",
     "transcribe": "node src/transcribe.js"
   },
   "keywords": [
