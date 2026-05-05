@@ -133,8 +133,7 @@ jobs:
             EOTCVideo \
             output/tiktok_ready.mp4 \
             --props=./render-props.json \
-            $EXTRA_FLAGS
-
+            $EXTRA_FLAGS 2>&1 | tee remotion-render.log || { echo "❌ Render failed. Logs:"; cat remotion-render.log; exit 1; }
           echo ""
           echo "✅ Render complete!"
 
