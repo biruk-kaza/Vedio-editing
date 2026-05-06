@@ -1,10 +1,11 @@
 /**
- * EOTC Voice Studio — Premium Outro Sequence
+ * EOTC Voice Studio — FINAL Premium Outro Sequence
  * 
- * Cinematic closing card with:
- * - Smooth fade from content
+ * Cinematic closing card:
+ * - Smooth cubic fade from content
  * - Spring-animated cross + branding
- * - Pulsing gold glow
+ * - Pulsing gold glow on cross
+ * - Animated divider width
  * - Clean fade to black
  */
 import React from 'react';
@@ -20,45 +21,39 @@ import { theme } from '../utils/theme.js';
 export const OutroSequence = ({ outroStartFrame }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
+  const rel = frame - outroStartFrame;
+  const dur = theme.timing.outroDuration;
 
-  const relativeFrame = frame - outroStartFrame;
-  const outroDuration = theme.timing.outroDuration;
+  if (rel < -5 || rel > dur + 10) return null;
 
-  // Only render during outro
-  if (relativeFrame < -5 || relativeFrame > outroDuration + 10) return null;
-
-  // Smooth cubic fade in
-  const fadeIn = interpolate(relativeFrame, [0, 25], [0, 1], {
+  // Fade in
+  const fadeIn = interpolate(rel, [0, 25], [0, 1], {
     extrapolateLeft: 'clamp',
     extrapolateRight: 'clamp',
     easing: Easing.out(Easing.cubic),
   });
 
-  // Content entrance spring
-  const contentSpring = spring({
-    frame: Math.max(0, relativeFrame),
+  // Content spring entrance
+  const sp = spring({
+    frame: Math.max(0, rel),
     fps,
     config: { damping: 16, mass: 0.8, stiffness: 100 },
     durationInFrames: 35,
   });
 
-  // Fade to black at the very end
-  const fadeToBlack = interpolate(
-    relativeFrame,
-    [outroDuration - 25, outroDuration],
-    [0, 1],
-    { extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.in(Easing.cubic) }
-  );
+  // Fade to black
+  const toBlack = interpolate(rel, [dur - 25, dur], [0, 1], {
+    extrapolateLeft: 'clamp',
+    extrapolateRight: 'clamp',
+    easing: Easing.in(Easing.cubic),
+  });
 
-  const contentY = interpolate(contentSpring, [0, 1], [35, 0]);
-  const contentScale = interpolate(contentSpring, [0, 1], [0.95, 1]);
+  const contentY = interpolate(sp, [0, 1], [35, 0]);
+  const contentScale = interpolate(sp, [0, 1], [0.95, 1]);
+  const divW = interpolate(sp, [0, 1], [0, 200]);
 
-  // Subtle gold pulse on cross
-  const crossGlow = interpolate(
-    Math.sin(relativeFrame * 0.06),
-    [-1, 1],
-    [0.5, 1.0]
-  );
+  // Cross glow pulse
+  const glowStr = interpolate(Math.sin(rel * 0.06), [-1, 1], [0.5, 1.0]);
 
   return (
     <div
@@ -72,7 +67,7 @@ export const OutroSequence = ({ outroStartFrame }) => {
         justifyContent: 'center',
       }}
     >
-      {/* Semi-transparent overlay */}
+      {/* Dark overlay */}
       <div
         style={{
           position: 'absolute',
@@ -100,7 +95,7 @@ export const OutroSequence = ({ outroStartFrame }) => {
           width={75}
           height={105}
           style={{
-            filter: `drop-shadow(0 0 ${12 * crossGlow}px ${theme.gold.glow})`,
+            filter: `drop-shadow(0 0 ${12 * glowStr}px ${theme.gold.glow})`,
           }}
         >
           <g fill={theme.gold.primary}>
@@ -116,13 +111,13 @@ export const OutroSequence = ({ outroStartFrame }) => {
         {/* Divider */}
         <div
           style={{
-            width: interpolate(contentSpring, [0, 1], [0, 200]),
+            width: divW,
             height: 1,
             background: `linear-gradient(90deg, transparent, ${theme.gold.primary}, transparent)`,
           }}
         />
 
-        {/* Brand text */}
+        {/* Brand */}
         <div
           style={{
             fontSize: 26,
@@ -137,7 +132,7 @@ export const OutroSequence = ({ outroStartFrame }) => {
           EOTC VOICE STUDIO
         </div>
 
-        {/* Amharic tag */}
+        {/* Amharic */}
         <div
           style={{
             fontSize: 19,
@@ -151,13 +146,13 @@ export const OutroSequence = ({ outroStartFrame }) => {
         </div>
       </div>
 
-      {/* Final fade to black */}
+      {/* Fade to black */}
       <div
         style={{
           position: 'absolute',
           inset: 0,
           backgroundColor: '#000',
-          opacity: fadeToBlack,
+          opacity: toBlack,
           zIndex: 2,
         }}
       />

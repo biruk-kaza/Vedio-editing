@@ -1,26 +1,26 @@
 /**
  * EOTC Voice Studio — Premium Design Tokens
  * 
- * Ultra-cinematic theme system with refined color science,
- * smooth animation curves, and professional typography.
+ * World-class cinematic theme. Centered "pop" captions,
+ * massive bold typography, spring physics, gold highlights.
  */
 
 export const theme = {
-  // ── Background Palette — Deep cinematic tones ──
+  // ── Background Palette ──
   bg: {
     deep: '#050508',
-    gradient1: '#0f0720',        // Rich indigo
-    gradient2: '#081020',        // Deep ocean blue
-    gradient3: '#120810',        // Warm dark wine
-    gradient4: '#0a0818',        // Midnight purple
+    gradient1: '#0f0720',
+    gradient2: '#081020',
+    gradient3: '#120810',
+    gradient4: '#0a0818',
   },
 
-  // ── Gold Accent System — Refined metallics ──
+  // ── Gold Accent System ──
   gold: {
     primary: '#d4a574',
     bright: '#f5d4a0',
     warm: '#c4915e',
-    hotGlow: '#ffd78a',
+    hotGlow: '#ffe4a0',
     glow: 'rgba(245, 212, 160, 0.40)',
     glowStrong: 'rgba(245, 212, 160, 0.65)',
     subtle: 'rgba(212, 165, 116, 0.10)',
@@ -28,9 +28,9 @@ export const theme = {
 
   // ── Text Colors ──
   text: {
-    primary: '#f8f4ef',
-    secondary: 'rgba(248, 244, 239, 0.50)',
-    dimmed: 'rgba(248, 244, 239, 0.22)',
+    primary: '#ffffff',
+    secondary: 'rgba(255, 255, 255, 0.40)',
+    dimmed: 'rgba(255, 255, 255, 0.18)',
     highlighted: '#ffffff',
   },
 
@@ -50,15 +50,21 @@ export const theme = {
     display: "'Inter', 'Noto Sans', sans-serif",
   },
 
-  // ── Caption Styling ──
+  // ── Caption Styling — CENTERED, MASSIVE, BOLD ──
   caption: {
-    fontSize: 48,
-    lineHeight: 1.6,
-    maxWidth: 900,
-    bottomOffset: 360,
-    wordGap: 12,
-    highlightScale: 1.06,
-    glowRadius: 20,
+    fontSize: 72,
+    fontWeight: 800,
+    lineHeight: 1.35,
+    maxWidth: 950,
+    wordGap: 16,
+    highlightScale: 1.12,
+    glowRadius: 28,
+    wordsPerLine: 3,
+    // Text stroke for readability over any background
+    stroke: {
+      width: 3,
+      color: 'rgba(0, 0, 0, 0.7)',
+    },
   },
 
   // ── Video Dimensions (9:16 TikTok/Reels) ──
@@ -68,16 +74,17 @@ export const theme = {
     fps: 30,
   },
 
-  // ── Animation Timings — Buttery smooth ──
+  // ── Animation Timings ──
   timing: {
     introFadeDuration: 45,
     outroFadeDuration: 45,
     introDuration: 90,
     outroDuration: 90,
-    captionFadeIn: 10,
-    captionFadeOut: 15,
-    wordSpring: { damping: 16, mass: 0.6, stiffness: 160 },
-    // Caption timing offset — shift earlier to fix late sync
-    captionOffsetSec: -0.15,
+    captionFadeIn: 6,
+    captionFadeOut: 10,
+    // Caption timing offset — positive = later (fix "too fast")
+    captionOffsetSec: 0.12,
+    // Word spring config — buttery pop
+    wordSpring: { damping: 12, mass: 0.4, stiffness: 200 },
   },
 };

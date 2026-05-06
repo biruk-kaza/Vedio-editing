@@ -4,9 +4,10 @@
  * Multi-layer cinematic backdrop with:
  * 1. Deep radial base gradient with gentle color cycling
  * 2. Multiple drifting bokeh orbs with organic bezier motion
- * 3. Soft aurora bands that sweep across the frame
+ * 3. Soft aurora bands
  * 4. Film grain texture overlay
  * 5. Cinematic vignette
+ * 6. Top/bottom gradient bars
  */
 import React from 'react';
 import { useCurrentFrame, useVideoConfig, interpolate } from 'remotion';
@@ -16,18 +17,15 @@ export const AnimatedBackground = () => {
   const frame = useCurrentFrame();
   const { durationInFrames } = useVideoConfig();
 
-  // Normalized time 0→1
   const t = frame / Math.max(durationInFrames, 1);
 
-  // ── Slow color cycling on base gradient ──
-  const hueShift = Math.sin(t * Math.PI * 2) * 8;
   const basePulse = interpolate(
     Math.sin(frame * 0.012),
     [-1, 1],
     [0.88, 1.0]
   );
 
-  // ── Orb positions — smooth sine/cosine paths ──
+  // 5 drifting bokeh orbs
   const orbs = [
     {
       x: 50 + Math.sin(frame * 0.005) * 18,
@@ -66,7 +64,6 @@ export const AnimatedBackground = () => {
     },
   ];
 
-  // ── Aurora sweep ──
   const auroraX = Math.sin(frame * 0.003) * 30;
   const auroraOpacity = interpolate(
     Math.sin(frame * 0.01),
@@ -146,7 +143,7 @@ export const AnimatedBackground = () => {
         style={{
           position: 'absolute',
           inset: 0,
-          opacity: 0.025,
+          opacity: 0.022,
           backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`,
           backgroundSize: '128px 128px',
         }}
@@ -159,23 +156,23 @@ export const AnimatedBackground = () => {
           inset: 0,
           background: `
             radial-gradient(
-              ellipse 65% 50% at 50% 50%,
-              transparent 20%,
-              rgba(0, 0, 0, 0.45) 100%
+              ellipse 60% 45% at 50% 50%,
+              transparent 15%,
+              rgba(0, 0, 0, 0.50) 100%
             )
           `,
         }}
       />
 
-      {/* Layer 6: Top/bottom gradient bars for cinematic feel */}
+      {/* Layer 6: Top/bottom gradient bars */}
       <div
         style={{
           position: 'absolute',
           top: 0,
           left: 0,
           right: 0,
-          height: '12%',
-          background: `linear-gradient(180deg, rgba(0,0,0,0.35) 0%, transparent 100%)`,
+          height: '14%',
+          background: `linear-gradient(180deg, rgba(0,0,0,0.4) 0%, transparent 100%)`,
         }}
       />
       <div
@@ -184,8 +181,8 @@ export const AnimatedBackground = () => {
           bottom: 0,
           left: 0,
           right: 0,
-          height: '18%',
-          background: `linear-gradient(0deg, rgba(0,0,0,0.5) 0%, transparent 100%)`,
+          height: '20%',
+          background: `linear-gradient(0deg, rgba(0,0,0,0.55) 0%, transparent 100%)`,
         }}
       />
     </div>

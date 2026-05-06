@@ -1,13 +1,17 @@
 /**
- * EOTC Voice Studio — Ultra-Smooth Caption Overlay
+ * EOTC Voice Studio — FINAL Premium Caption Engine
  * 
- * World-class karaoke-style word-by-word captions with:
- * - Buttery smooth cubic-bezier entrance animations
- * - Active word glows with gradient highlight
- * - Frosted glass backdrop behind text
- * - Precise timing sync with configurable offset
- * - Smooth color interpolation between states
- * - Sub-pixel anti-aliased text rendering
+ * Professional motion-graphics level karaoke captions:
+ * - CENTERED on screen
+ * - 72px bold Ethiopic typography with text stroke
+ * - 3 words per line for cinematic impact
+ * - Spring "pop" entrance per word
+ * - Active word = bright gold with breathing glow
+ * - Past words = clean white
+ * - Future words = dim, waiting
+ * - Frosted glass backdrop
+ * - +0.12s timing offset (fixes "too fast" sync)
+ * - All interpolate calls use strictly increasing input ranges
  */
 import React, { useMemo } from 'react';
 import {
@@ -19,13 +23,10 @@ import {
 } from 'remotion';
 import { theme } from '../utils/theme.js';
 
-/**
- * Group words into display lines of N words each.
- */
-function groupWordsIntoLines(words, maxPerLine = 4) {
+/* ─── Group words into lines of N ─── */
+function groupWordsIntoLines(words, maxPerLine) {
   const lines = [];
   let current = [];
-
   for (const word of words) {
     current.push(word);
     if (current.length >= maxPerLine) {
@@ -33,86 +34,74 @@ function groupWordsIntoLines(words, maxPerLine = 4) {
         words: [...current],
         start: current[0].start,
         end: current[current.length - 1].end,
-        text: current.map((w) => w.word).join(' '),
       });
       current = [];
     }
   }
-
   if (current.length > 0) {
     lines.push({
       words: [...current],
       start: current[0].start,
       end: current[current.length - 1].end,
-      text: current.map((w) => w.word).join(' '),
     });
   }
-
   return lines;
 }
 
-/**
- * Single animated word — silky smooth transitions.
- */
-const AnimatedWord = ({ word, isActive, isPast, entranceFrame, fps, wordIndex }) => {
+/* ═══════════════════════════════════════
+   ANIMATED WORD — spring pop + glow
+   ═══════════════════════════════════════ */
+const AnimatedWord = ({ word, isActive, isPast, entranceFrame, fps }) => {
   const frame = useCurrentFrame();
+  const localFrame = Math.max(0, frame - entranceFrame);
 
-  // Smooth spring entrance — tuned for butter
-  const localFrame = frame - entranceFrame;
-  const entranceProgress = spring({
+  // Spring pop: 0 → overshoots past 1 → settles at 1
+  const pop = spring({
     frame: localFrame,
     fps,
-    config: { damping: 18, mass: 0.5, stiffness: 140 },
-    durationInFrames: 24,
+    config: { damping: 11, mass: 0.35, stiffness: 220 },
+    durationInFrames: 22,
   });
 
-  // Smooth scale — active word gently pops
-  const activeProgress = isActive
-    ? interpolate(
-        spring({
-          frame: localFrame,
-          fps,
-          config: { damping: 20, mass: 0.4, stiffness: 200 },
-          durationInFrames: 15,
-        }),
-        [0, 1],
-        [1, theme.caption.highlightScale]
-      )
-    : 1;
+  // Base scale from spring
+  const baseScale = interpolate(pop, [0, 1], [0.55, 1]);
 
-  const baseScale = interpolate(entranceProgress, [0, 1], [0.85, 1]);
-  const scale = baseScale * activeProgress;
+  // Active word gets a subtle breathing scale pulse
+  let scaleMult = 1;
+  if (isActive) {
+    scaleMult = interpolate(
+      Math.sin(localFrame * 0.1),
+      [-1, 1],
+      [1.0, theme.caption.highlightScale]
+    );
+  }
 
-  // Opacity — words fade in smoothly, stay bright
-  const opacity = interpolate(entranceProgress, [0, 0.4, 1], [0, 0.6, 1], {
-    extrapolateRight: 'clamp',
-  });
+  const scale = baseScale * scaleMult;
 
-  // Y entrance — subtle upward float
-  const translateY = interpolate(entranceProgress, [0, 1], [10, 0]);
+  // Opacity: smooth 3-stop fade in
+  const opacity = interpolate(pop, [0, 0.25, 1], [0, 0.4, 1]);
 
-  // ── Color states with smooth interpolation ──
-  let color, textShadow, fontWeight;
+  // Y float: words rise into position
+  const translateY = interpolate(pop, [0, 1], [20, 0]);
+
+  // ── Visual states ──
+  let color, shadow, weight, stroke;
 
   if (isActive) {
-    // Active word: bright gold with dual glow
     color = theme.gold.hotGlow;
-    textShadow = [
-      `0 0 ${theme.caption.glowRadius}px ${theme.gold.glow}`,
-      `0 0 ${theme.caption.glowRadius * 2.5}px ${theme.gold.subtle}`,
-      `0 2px 4px rgba(0,0,0,0.4)`,
-    ].join(', ');
-    fontWeight = 700;
+    shadow = `0 0 ${theme.caption.glowRadius}px ${theme.gold.glowStrong}, 0 0 ${theme.caption.glowRadius * 3}px ${theme.gold.glow}, 0 3px 8px rgba(0,0,0,0.5)`;
+    weight = 800;
+    stroke = `${theme.caption.stroke.width}px ${theme.caption.stroke.color}`;
   } else if (isPast) {
-    // Past word: bright white, no glow
     color = theme.text.primary;
-    textShadow = `0 1px 6px rgba(0,0,0,0.35)`;
-    fontWeight = 600;
+    shadow = '0 2px 10px rgba(0,0,0,0.6), 0 0 3px rgba(0,0,0,0.3)';
+    weight = 700;
+    stroke = '2px rgba(0,0,0,0.5)';
   } else {
-    // Future word: dimmed
     color = theme.text.secondary;
-    textShadow = `0 1px 4px rgba(0,0,0,0.25)`;
-    fontWeight = 400;
+    shadow = '0 2px 6px rgba(0,0,0,0.35)';
+    weight = 600;
+    stroke = '1.5px rgba(0,0,0,0.25)';
   }
 
   return (
@@ -122,15 +111,16 @@ const AnimatedWord = ({ word, isActive, isPast, entranceFrame, fps, wordIndex })
         color,
         fontSize: theme.caption.fontSize,
         fontFamily: theme.fonts.caption,
-        fontWeight,
+        fontWeight: weight,
         opacity,
         transform: `translateY(${translateY}px) scale(${scale})`,
-        textShadow,
+        textShadow: shadow,
+        WebkitTextStroke: stroke,
+        paintOrder: 'stroke fill',
         marginRight: theme.caption.wordGap,
         lineHeight: theme.caption.lineHeight,
         willChange: 'transform, opacity',
         WebkitFontSmoothing: 'antialiased',
-        MozOsxFontSmoothing: 'grayscale',
       }}
     >
       {word.word}
@@ -138,52 +128,48 @@ const AnimatedWord = ({ word, isActive, isPast, entranceFrame, fps, wordIndex })
   );
 };
 
-/**
- * A single caption line with smooth entrance and exit.
- */
+/* ═══════════════════════════════════════
+   CAPTION LINE — fade in/out + scale
+   ═══════════════════════════════════════ */
 const CaptionLine = ({ line, lineIndex, fps, introFrames }) => {
   const frame = useCurrentFrame();
   const offset = theme.timing.captionOffsetSec;
-  const currentTime = (frame - introFrames) / fps + offset;
+  const currentTime = (frame - introFrames) / fps - offset;
 
   const lineStartFrame = introFrames + Math.floor((line.start + offset) * fps);
   const lineEndFrame = introFrames + Math.floor((line.end + offset) * fps);
 
-  // Smooth cubic fade in
-  const fadeIn = interpolate(
-    frame,
-    [lineStartFrame - theme.timing.captionFadeIn, lineStartFrame],
-    [0, 1],
-    {
-      extrapolateLeft: 'clamp',
-      extrapolateRight: 'clamp',
-      easing: Easing.out(Easing.cubic),
-    }
-  );
+  // Entrance fade (0→1) — cubic ease-out
+  const fadeInStart = lineStartFrame - theme.timing.captionFadeIn;
+  const fadeInEnd = lineStartFrame + 3;
+  const fadeIn = interpolate(frame, [fadeInStart, fadeInEnd], [0, 1], {
+    extrapolateLeft: 'clamp',
+    extrapolateRight: 'clamp',
+    easing: Easing.out(Easing.cubic),
+  });
 
-  // Smooth cubic fade out
-  const fadeOut = interpolate(
-    frame,
-    [lineEndFrame + 3, lineEndFrame + theme.timing.captionFadeOut + 3],
-    [1, 0],
-    {
-      extrapolateLeft: 'clamp',
-      extrapolateRight: 'clamp',
-      easing: Easing.in(Easing.cubic),
-    }
-  );
+  // Exit fade (1→0) — cubic ease-in
+  const fadeOutStart = lineEndFrame + 8;
+  const fadeOutEnd = lineEndFrame + theme.timing.captionFadeOut + 8;
+  const fadeOut = interpolate(frame, [fadeOutStart, fadeOutEnd], [1, 0], {
+    extrapolateLeft: 'clamp',
+    extrapolateRight: 'clamp',
+    easing: Easing.in(Easing.cubic),
+  });
 
   const lineOpacity = fadeIn * fadeOut;
 
-  // Smooth slide up entrance
-  const slideY = interpolate(fadeIn, [0, 1], [16, 0], {
-    easing: Easing.out(Easing.cubic),
-  });
+  // Entrance scale: 0.90 → 1.0
+  const entranceScale = interpolate(fadeIn, [0, 1], [0.90, 1]);
 
-  // Smooth scale entrance
-  const lineScale = interpolate(fadeIn, [0, 1], [0.97, 1], {
-    easing: Easing.out(Easing.cubic),
-  });
+  // Exit scale: use fadeOut (1→0) mapped to scale (1.0→0.95)
+  // fadeOut goes 1→0, so: when fadeOut=1 (visible), scale=1; when fadeOut=0 (gone), scale=0.95
+  const exitScale = 0.95 + fadeOut * 0.05;
+
+  const lineScale = entranceScale * exitScale;
+
+  // Slide up on entrance
+  const slideY = interpolate(fadeIn, [0, 1], [22, 0]);
 
   if (lineOpacity < 0.01) return null;
 
@@ -199,22 +185,20 @@ const CaptionLine = ({ line, lineIndex, fps, introFrames }) => {
         willChange: 'transform, opacity',
       }}
     >
-      {line.words.map((word, wordIndex) => {
+      {line.words.map((word, wi) => {
         const wordStartFrame =
           introFrames + Math.floor((word.start + offset) * fps);
-        const isActive =
-          currentTime >= word.start && currentTime < word.end;
+        const isActive = currentTime >= word.start && currentTime < word.end;
         const isPast = currentTime >= word.end;
 
         return (
           <AnimatedWord
-            key={`${lineIndex}-${wordIndex}`}
+            key={`${lineIndex}-${wi}`}
             word={word}
             isActive={isActive}
             isPast={isPast}
             entranceFrame={wordStartFrame}
             fps={fps}
-            wordIndex={wordIndex}
           />
         );
       })}
@@ -222,67 +206,56 @@ const CaptionLine = ({ line, lineIndex, fps, introFrames }) => {
   );
 };
 
-/**
- * Main Caption Overlay — frosted glass container with smooth lines.
- */
+/* ═══════════════════════════════════════
+   CAPTION OVERLAY — centered container
+   ═══════════════════════════════════════ */
 export const CaptionOverlay = ({ words = [], introFrames = 0 }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const offset = theme.timing.captionOffsetSec;
-  const currentTime = (frame - introFrames) / fps + offset;
+  const currentTime = (frame - introFrames) / fps - offset;
 
-  // Group words into lines
-  const lines = useMemo(() => groupWordsIntoLines(words, 4), [words]);
+  const lines = useMemo(
+    () => groupWordsIntoLines(words, theme.caption.wordsPerLine),
+    [words]
+  );
 
-  // Find visible lines
   const visibleLines = lines.filter((line) => {
-    const bufferSec = (theme.timing.captionFadeOut + 5) / fps;
-    return (
-      currentTime >= line.start - 0.4 &&
-      currentTime <= line.end + bufferSec
-    );
+    const buf = (theme.timing.captionFadeOut + 10) / fps;
+    return currentTime >= line.start - 0.5 && currentTime <= line.end + buf;
   });
 
-  // Backdrop opacity tracks caption visibility
-  const hasVisibleCaptions = visibleLines.length > 0;
-  const backdropOpacity = hasVisibleCaptions ? 1 : 0;
+  const hasVisible = visibleLines.length > 0;
 
   return (
     <div
       style={{
         position: 'absolute',
-        bottom: theme.caption.bottomOffset,
-        left: 0,
-        right: 0,
+        inset: 0,
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        justifyContent: 'flex-end',
-        gap: 6,
-        padding: '0 50px',
+        justifyContent: 'center',
         zIndex: 10,
+        padding: '0 36px',
       }}
     >
-      {/* Frosted glass backdrop */}
-      {hasVisibleCaptions && (
+      {/* Soft radial backdrop for readability */}
+      {hasVisible && (
         <div
           style={{
             position: 'absolute',
-            bottom: -40,
-            left: '5%',
-            right: '5%',
-            height: 180,
-            background: `linear-gradient(
-              180deg,
-              transparent 0%,
-              rgba(0, 0, 0, 0.15) 30%,
-              rgba(0, 0, 0, 0.35) 70%,
-              rgba(0, 0, 0, 0.2) 100%
+            width: '92%',
+            height: 220,
+            background: `radial-gradient(
+              ellipse 100% 100% at 50% 50%,
+              rgba(0, 0, 0, 0.28) 0%,
+              rgba(0, 0, 0, 0.12) 55%,
+              transparent 100%
             )`,
-            borderRadius: 30,
-            filter: 'blur(40px)',
+            borderRadius: 50,
+            filter: 'blur(45px)',
             zIndex: -1,
-            opacity: backdropOpacity,
           }}
         />
       )}
