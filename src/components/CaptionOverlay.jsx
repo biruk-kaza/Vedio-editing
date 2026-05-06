@@ -1,36 +1,24 @@
 /**
- * EOTC Voice Studio — After Effects-Grade Kinetic Typography
+ * EOTC Voice Studio — Maximum Cinematic Kinetic Typography
  * 
- * ═══ EXACT MOTION DESIGN SPECS ═══
+ * ═══ 3D SPATIAL KINETICS ═══
  * 
- * 1. SPRING PHYSICS (no CSS transitions)
- *    All motion uses Remotion's spring() and interpolate() with
- *    custom cubic-bezier easing. Zero linear animations.
+ * 1. DYNAMIC PLACEMENT (Z-Space Tracking)
+ *    Text blocks don't just appear dead-center.
+ *    Each phrase has a unique offset (X, Y, RotZ) based on its index.
+ *    This forces the viewer's eye to move, creating high-end dynamic pacing.
  * 
- * 2. KINETIC ENTRY (15 frames)
- *    - Y-axis: +20px → 0px
- *    - Scale: 0.95 → 1.0
- *    - SkewY: 5deg → 0deg (pops out of background)
- *    - Opacity: 0 → 1
- *    - Easing: bezier(0.16, 1, 0.3, 1) — exponential ease-out
+ * 2. CONTINUOUS PUSH
+ *    While a phrase is on screen, it slowly pushes forward in Z-space
+ *    and drifts slightly, preventing any static moments.
  * 
- * 3. EXIT OVERLAP
- *    - Y-axis: 0 → -20px (drifts up)
- *    - Opacity: 1 → 0
- *    - Scale: 1.0 → 0.97
- *    - Blur: 0 → 1.5px
- *    - Overlaps next phrase entrance by 5 frames
+ * 3. 3D HINGE ENTRY
+ *    Words swing into view using rotateX(-85deg -> 0deg) combined
+ *    with the previous translateY and scale. 
  * 
- * 4. SPRING-LOADED BRACKETS
- *    - Width dynamically computed from text character count
- *    - Animated via spring({ damping: 14, stiffness: 120 })
- *    - Slight bounce on entrance
- * 
- * 5. WORD-LEVEL HIGHLIGHTING
- *    - Each word tracked by its own start/end timestamps
- *    - Active: smooth gold color + brightness(1.35) filter + drop-shadow
- *    - Inactive: muted white/grey
- *    - No jarring color snaps — smooth interpolated transition
+ * 4. SPRING BRACKETS
+ *    Brackets dynamically fit the text width and track with the
+ *    3D transforms of the text block.
  */
 import React, { useMemo } from 'react';
 import {
@@ -42,12 +30,10 @@ import {
 } from 'remotion';
 import { theme } from '../utils/theme.js';
 
-// ── Custom easing curves ──
 const EASE_GLOW_REVEAL = Easing.bezier(0.16, 1, 0.3, 1);
 const EASE_SILK_IN     = Easing.bezier(0.0, 0.0, 0.2, 1);
 
-// ── Dynamic bracket sizing ──
-const CHAR_WIDTH_PX = 41; // Amharic avg at 68px font
+const CHAR_WIDTH_PX = 41;
 const MIN_BRACKET_WIDTH = 120;
 const MAX_BRACKET_WIDTH = 640;
 const BRACKET_PADDING = 60;
@@ -58,7 +44,6 @@ function estimateLineWidth(words) {
   return Math.max(MIN_BRACKET_WIDTH, Math.min(MAX_BRACKET_WIDTH, chars * CHAR_WIDTH_PX + gaps + BRACKET_PADDING));
 }
 
-/* ─── Group words into lines ─── */
 function groupWordsIntoLines(words, max) {
   const lines = [];
   let cur = [];
@@ -77,9 +62,6 @@ function groupWordsIntoLines(words, max) {
 
 /* ═══════════════════════════════════════════════
    SPRING-LOADED DYNAMIC BRACKETS
-   
-   spring({ damping: 14, stiffness: 120 })
-   Width computed from character count — animates with bounce
    ═══════════════════════════════════════════════ */
 const DynamicBrackets = ({ bracketSpring, targetWidth, isIlluminated, frame }) => {
   const lineW = interpolate(bracketSpring, [0, 1], [0, targetWidth]);
@@ -105,40 +87,17 @@ const DynamicBrackets = ({ bracketSpring, targetWidth, isIlluminated, frame }) =
 
   return (
     <>
-      {/* DYNAMIC ACCENT LINES — width tracks text block */}
-      <div style={{
-        position: 'absolute', top: -22, left: '50%',
-        width: lineW, height: 1.5, transform: 'translateX(-50%)',
-        background: `linear-gradient(90deg, transparent 0%, ${col} 30%, ${col} 70%, transparent 100%)`,
-        opacity: frameOp,
-        boxShadow: isIlluminated ? `0 0 10px ${glow}` : 'none',
-      }} />
-      <div style={{
-        position: 'absolute', bottom: -22, left: '50%',
-        width: lineW, height: 1.5, transform: 'translateX(-50%)',
-        background: `linear-gradient(90deg, transparent 0%, ${col} 30%, ${col} 70%, transparent 100%)`,
-        opacity: frameOp,
-        boxShadow: isIlluminated ? `0 0 10px ${glow}` : 'none',
-      }} />
+      <div style={{ position: 'absolute', top: -22, left: '50%', width: lineW, height: 1.5, transform: 'translateX(-50%)', background: `linear-gradient(90deg, transparent 0%, ${col} 30%, ${col} 70%, transparent 100%)`, opacity: frameOp, boxShadow: isIlluminated ? `0 0 10px ${glow}` : 'none' }} />
+      <div style={{ position: 'absolute', bottom: -22, left: '50%', width: lineW, height: 1.5, transform: 'translateX(-50%)', background: `linear-gradient(90deg, transparent 0%, ${col} 30%, ${col} 70%, transparent 100%)`, opacity: frameOp, boxShadow: isIlluminated ? `0 0 10px ${glow}` : 'none' }} />
 
-      {/* DIAMONDS at accent endpoints */}
       {bracketSpring > 0.35 && (
         <>
           {[[-1, 'top'], [1, 'top'], [-1, 'bottom'], [1, 'bottom']].map(([side, vert], i) => (
-            <div key={i} style={{
-              position: 'absolute',
-              ...(vert === 'top' ? { top: -30 } : { bottom: -30 }),
-              left: '50%',
-              transform: `translateX(${side * (lineW / 2 + 6)}px) scale(${bracketSpring * diamondPulse})`,
-              color: col, fontSize: 11,
-              opacity: bracketSpring * 0.6,
-              textShadow: `0 0 ${diamondGlow}px ${glow}`,
-            }}>✦</div>
+            <div key={i} style={{ position: 'absolute', ...(vert === 'top' ? { top: -30 } : { bottom: -30 }), left: '50%', transform: `translateX(${side * (lineW / 2 + 6)}px) scale(${bracketSpring * diamondPulse})`, color: col, fontSize: 11, opacity: bracketSpring * 0.6, textShadow: `0 0 ${diamondGlow}px ${glow}` }}>✦</div>
           ))}
         </>
       )}
 
-      {/* CORNER BRACKETS — spring-scaled from corners */}
       {bracketSpring > 0.12 && (
         <>
           <div style={{ position: 'absolute', top: -40, left: bracketInset, width: sz, height: sz, opacity: bracketOp, borderTop: `${bw}px solid ${col}`, borderLeft: `${bw}px solid ${col}`, transform: `scale(${bracketScale * bracketBreath})`, transformOrigin: 'top left' }} />
@@ -152,22 +111,14 @@ const DynamicBrackets = ({ bracketSpring, targetWidth, isIlluminated, frame }) =
 };
 
 /* ═══════════════════════════════════════════════
-   WORD-LEVEL ANIMATED WORD
-   
-   Each word independently tracked by start/end timestamps.
-   Active: gold + brightness filter + drop-shadow glow
-   Inactive: muted grey/white
+   3D WORD-LEVEL ENTRY
+   Words swing down like a hinge (rotateX -85 -> 0)
    ═══════════════════════════════════════════════ */
 const AnimatedWord = ({ word, isActive, isPast, entranceFrame, fps, staggerIdx }) => {
   const frame = useCurrentFrame();
   const staggered = entranceFrame + staggerIdx * theme.timing.wordStagger;
   const localFrame = Math.max(0, frame - staggered);
 
-  // ── KINETIC ENTRY over 15 frames ──
-  // Y: +20px → 0
-  // Scale: 0.95 → 1.0
-  // SkewY: 5deg → 0deg
-  // Opacity: 0 → 1
   const entryFrames = 15;
   const entryProg = interpolate(localFrame, [0, entryFrames], [0, 1], {
     extrapolateLeft: 'clamp', extrapolateRight: 'clamp',
@@ -175,27 +126,23 @@ const AnimatedWord = ({ word, isActive, isPast, entranceFrame, fps, staggerIdx }
   });
 
   const scale = interpolate(entryProg, [0, 1], [0.95, 1.0]);
-  const opacity = interpolate(entryProg, [0, 0.3, 1], [0, 0.5, 1]);
-  const translateY = interpolate(entryProg, [0, 1], [20, 0]);
-  const skewY = interpolate(entryProg, [0, 1], [5, 0]);
+  const opacity = interpolate(entryProg, [0, 0.4, 1], [0, 0.7, 1]);
+  const translateY = interpolate(entryProg, [0, 1], [25, 0]);
+  
+  // 3D Hinge entry
+  const rotateX = interpolate(entryProg, [0, 1], [-85, 0]);
 
-  // Active breathing scale
   let scaleMult = 1;
   if (isActive) {
     scaleMult = interpolate(Math.sin(frame * 0.08), [-1, 1], [1.0, theme.caption.highlightScale]);
   }
 
-  // ── ACTIVE WORD: brightness filter + gold drop-shadow glow ──
   let filterVal = 'none';
   if (isActive) {
     const glowPulse = interpolate(Math.sin(frame * 0.08), [-1, 1], [0.7, 1.0]);
     filterVal = `brightness(1.35) drop-shadow(0 0 ${theme.caption.glowRadius * glowPulse}px ${theme.gold.glowStrong})`;
   }
 
-  // ── COLOR: smooth word-level highlighting ──
-  // Active: champagne gold with text-shadow glow
-  // Inactive past: muted slightly transparent white
-  // Inactive future: barely visible grey
   let color, shadow, weight;
   if (isActive) {
     color = theme.text.active;
@@ -221,7 +168,8 @@ const AnimatedWord = ({ word, isActive, isPast, entranceFrame, fps, staggerIdx }
         fontFamily: theme.fonts.caption,
         fontWeight: weight,
         opacity,
-        transform: `translateY(${translateY}px) scale(${scale * scaleMult}) skewY(${skewY}deg)`,
+        transform: `translateY(${translateY}px) scale(${scale * scaleMult}) rotateX(${rotateX}deg)`,
+        transformOrigin: '50% 100%', // Hinge from bottom
         textShadow: shadow,
         filter: filterVal,
         WebkitTextStroke: `${theme.caption.stroke.width}px ${theme.caption.stroke.color}`,
@@ -235,11 +183,9 @@ const AnimatedWord = ({ word, isActive, isPast, entranceFrame, fps, staggerIdx }
       {word.word}
       {isActive && (
         <div style={{
-          position: 'absolute', bottom: -2,
-          left: '10%', right: '10%', height: 2.5, borderRadius: 2,
+          position: 'absolute', bottom: -2, left: '10%', right: '10%', height: 2.5, borderRadius: 2,
           background: `linear-gradient(90deg, transparent, ${theme.gold.bright}, transparent)`,
-          opacity: 0.8,
-          boxShadow: `0 0 8px ${theme.gold.glow}`,
+          opacity: 0.8, boxShadow: `0 0 8px ${theme.gold.glow}`,
         }} />
       )}
     </span>
@@ -247,12 +193,9 @@ const AnimatedWord = ({ word, isActive, isPast, entranceFrame, fps, staggerIdx }
 };
 
 /* ═══════════════════════════════════════════════
-   CAPTION LINE — overlapping kinetic transitions
-   
-   Enter: Y +20→0, scale 0.95→1.0, skewY 5→0, opacity 0→1, over 15 frames
-   Exit:  Y 0→-20, scale 1.0→0.97, opacity 1→0, blur 0→1.5px
-   Overlap: 5-frame window between phrases
-   Brackets: spring({ damping: 14, stiffness: 120 })
+   DYNAMIC SPATIAL LINE
+   Each line is placed at a unique X/Y offset
+   and continuously drifts toward the camera.
    ═══════════════════════════════════════════════ */
 const CaptionLine = ({ line, lineIndex, fps, introFrames }) => {
   const frame = useCurrentFrame();
@@ -264,7 +207,18 @@ const CaptionLine = ({ line, lineIndex, fps, introFrames }) => {
 
   const targetWidth = estimateLineWidth(line.words);
 
-  // ── OVERLAPPING ENTRANCE (9 frames) ──
+  // ── SPATIAL PLACEMENT ──
+  // Alternating positions so the text dances around the center
+  const isEven = lineIndex % 2 === 0;
+  const placementX = isEven ? 25 : -25;
+  const placementY = (lineIndex % 3 === 0) ? -15 : (lineIndex % 3 === 1) ? 0 : 15;
+  const placementRotZ = isEven ? 1.2 : -1.2;
+
+  // ── CONTINUOUS DRIFT ──
+  // Slowly push towards the camera while on screen
+  const continuousZ = interpolate(frame, [lineStartFrame, lineEndFrame], [0, 40], { extrapolateRight: 'clamp' });
+
+  // ── OVERLAPPING ENTRANCE ──
   const overlapFrames = 9;
   const entranceStart = lineStartFrame - overlapFrames;
   const entranceEnd = lineStartFrame + 6;
@@ -273,7 +227,7 @@ const CaptionLine = ({ line, lineIndex, fps, introFrames }) => {
     easing: EASE_GLOW_REVEAL,
   });
 
-  // ── OVERLAPPING EXIT (9 frames) ──
+  // ── OVERLAPPING EXIT ──
   const exitStart = lineEndFrame + 3;
   const exitEnd = exitStart + overlapFrames;
   const exitProg = interpolate(frame, [exitStart, exitEnd], [0, 1], {
@@ -283,23 +237,20 @@ const CaptionLine = ({ line, lineIndex, fps, introFrames }) => {
 
   const lineOpacity = entranceProg * (1 - exitProg);
 
-  // ── KINETIC ENTRY: Y +20→0, scale 0.95→1.0, skewY 5→0 ──
-  const entranceScale = interpolate(entranceProg, [0, 1], [0.95, 1.0]);
-  const entranceY = interpolate(entranceProg, [0, 1], [20, 0]);
-  const entranceSkewY = interpolate(entranceProg, [0, 1], [5, 0]);
+  // Entry kinetics
+  const entranceScale = interpolate(entranceProg, [0, 1], [0.92, 1.0]);
+  const entranceY = interpolate(entranceProg, [0, 1], [30, 0]);
 
-  // ── KINETIC EXIT: Y 0→-20, scale 1.0→0.97, blur ──
-  const exitDriftY = exitProg * -20;
-  const exitScale = 1 - exitProg * 0.03;
-  const exitBlur = exitProg * 1.5;
+  // Exit kinetics (fly past camera)
+  const exitDriftY = exitProg * -30;
+  const exitScale = 1 + exitProg * 0.15; // grows slightly as it fades
+  const exitBlur = exitProg * 2.5;
 
-  const totalY = entranceY + exitDriftY;
+  const totalY = entranceY + exitDriftY + placementY;
   const totalScale = entranceScale * exitScale;
 
-  // ── SPRING-LOADED BRACKETS: damping 14, stiffness 120 ──
   const bracketSpring = spring({
-    frame: Math.max(0, frame - entranceStart),
-    fps,
+    frame: Math.max(0, frame - entranceStart), fps,
     config: { damping: 14, stiffness: 120, mass: 0.5 },
     durationInFrames: 35,
   });
@@ -314,9 +265,9 @@ const CaptionLine = ({ line, lineIndex, fps, introFrames }) => {
   return (
     <div
       style={{
-        position: 'absolute',
-        left: 0, right: 0, top: '50%',
-        transform: `translateY(calc(-50% + ${totalY}px)) scale(${totalScale}) skewY(${entranceSkewY}deg)`,
+        position: 'absolute', left: 0, right: 0, top: '50%',
+        // Combine placement, drift, entrance, and exit physics
+        transform: `translate3d(calc(-50% + ${placementX}px), calc(-50% + ${totalY}px), ${continuousZ}px) scale(${totalScale}) rotateZ(${placementRotZ}deg)`,
         opacity: lineOpacity,
         textAlign: 'center',
         maxWidth: theme.caption.maxWidth,
@@ -324,30 +275,18 @@ const CaptionLine = ({ line, lineIndex, fps, introFrames }) => {
         padding: '10px 36px',
         filter: exitBlur > 0.05 ? `blur(${exitBlur}px)` : 'none',
         willChange: 'transform, opacity, filter',
+        transformStyle: 'preserve-3d',
       }}
     >
-      <DynamicBrackets
-        bracketSpring={bracketVal}
-        targetWidth={targetWidth}
-        isIlluminated={isIlluminated}
-        frame={frame}
-      />
-
-      <div style={{ position: 'relative', zIndex: 1 }}>
+      <DynamicBrackets bracketSpring={bracketVal} targetWidth={targetWidth} isIlluminated={isIlluminated} frame={frame} />
+      <div style={{ position: 'relative', zIndex: 1, transformStyle: 'preserve-3d' }}>
         {line.words.map((word, wi) => {
           const wordStartFrame = introFrames + Math.floor((word.start + offset) * fps);
           const isActive = currentTime >= word.start && currentTime < word.end;
           const isPast = currentTime >= word.end;
-
           return (
             <AnimatedWord
-              key={`${lineIndex}-${wi}`}
-              word={word}
-              isActive={isActive}
-              isPast={isPast}
-              entranceFrame={wordStartFrame}
-              fps={fps}
-              staggerIdx={wi}
+              key={`${lineIndex}-${wi}`} word={word} isActive={isActive} isPast={isPast} entranceFrame={wordStartFrame} fps={fps} staggerIdx={wi}
             />
           );
         })}
@@ -356,58 +295,29 @@ const CaptionLine = ({ line, lineIndex, fps, introFrames }) => {
   );
 };
 
-/* ═══════════════════════════════════════════════
-   MAIN OVERLAY — LOCKED ANCHOR POINT
-   Fixed-height container at screen center.
-   Lines absolutely positioned inside — no vertical jitter.
-   ═══════════════════════════════════════════════ */
 export const CaptionOverlay = ({ words = [], introFrames = 0 }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const offset = theme.timing.captionOffsetSec;
   const currentTime = (frame - introFrames) / fps - offset;
 
-  const lines = useMemo(
-    () => groupWordsIntoLines(words, theme.caption.wordsPerLine),
-    [words]
-  );
+  const lines = useMemo(() => groupWordsIntoLines(words, theme.caption.wordsPerLine), [words]);
 
   const visibleLines = lines.filter((line) => {
     const buf = 22 / fps;
     return currentTime >= line.start - 0.5 && currentTime <= line.end + buf;
   });
 
-  const hasVisible = visibleLines.length > 0;
-
   return (
     <div style={{
       position: 'absolute', inset: 0,
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       zIndex: 10, pointerEvents: 'none',
+      perspective: '1200px', // Establish deep Z-space
     }}>
-      <div style={{
-        position: 'relative',
-        width: '100%',
-        height: 160,
-        maxWidth: theme.caption.maxWidth,
-      }}>
-        {hasVisible && (
-          <div style={{
-            position: 'absolute',
-            top: -50, bottom: -50, left: -60, right: -60,
-            background: 'radial-gradient(ellipse 100% 100% at 50% 50%, rgba(0,0,0,0.25) 0%, rgba(0,0,0,0.08) 55%, transparent 100%)',
-            borderRadius: 60, filter: 'blur(40px)', zIndex: -1,
-          }} />
-        )}
-
+      <div style={{ position: 'relative', width: '100%', height: 160, maxWidth: theme.caption.maxWidth, transformStyle: 'preserve-3d' }}>
         {visibleLines.map((line, i) => (
-          <CaptionLine
-            key={`line-${line.start}-${line.end}`}
-            line={line}
-            lineIndex={i}
-            fps={fps}
-            introFrames={introFrames}
-          />
+          <CaptionLine key={`line-${line.start}-${line.end}`} line={line} lineIndex={i} fps={fps} introFrames={introFrames} />
         ))}
       </div>
     </div>

@@ -1,35 +1,13 @@
 /**
- * EOTC Voice Studio — Cinematic Motion Design Composition
+ * EOTC Voice Studio — Maximum Cinematic Motion Design
  * 
- * ═══ CINEMATIC FEATURES ═══
+ * ═══ PARALLAX CAMERA ENGINE ═══
+ * We separate the scene into 3 depth layers: Background, Midground, Foreground.
+ * As the "virtual camera" pans and tilts (using continuous sine waves), 
+ * the layers move at different speeds to create true 3D parallax depth.
  * 
- * 1. CAMERA MOVEMENT
- *    Entire scene wrapped in a slow zoom-out container:
- *    Scale 1.05 → 1.0 over the full clip duration.
- *    Creates a subtle cinematic "pull-back" effect.
- * 
- * 2. AUDIO REACTIVITY
- *    Audio amplitude is extracted via getAudioData + visualizeAudio.
- *    The bass amplitude drives a "pulse" variable that's passed
- *    to the CrossWatermark, making it breathe with the speaker's voice.
- * 
- * 3. AMBIENT BACKGROUND
- *    Pulsating gradient + sparse floating particles (existing).
- * 
- * 4. FONT LOADING
- *    @remotion/google-fonts for bulletproof Amharic rendering.
- *    Proper character shaping for ፒኬ etc during frame capture.
- * 
- * Layer Stack (bottom → top):
- * ─────────────────────────────
- * 1. AnimatedBackground   — cinematic gradient + bokeh
- * 2. LightRays            — volumetric god-rays
- * 3. CrossWatermark       — audio-reactive EOTC cross
- * 4. ParticleField        — floating golden dust
- * 5. Audio                — voiceover (starts after intro)
- * 6. CaptionOverlay       — kinetic typography
- * 7. IntroSequence        — cinematic opening
- * 8. OutroSequence        — branded closing
+ * ═══ AUDIO REACTIVITY ═══
+ * Amplitude drives the main cross's scale and glow, pulsing with the voice.
  */
 import React, { useEffect, useState } from 'react';
 import {
@@ -54,7 +32,7 @@ import { IntroSequence } from './components/IntroSequence.jsx';
 import { OutroSequence } from './components/OutroSequence.jsx';
 import { theme } from './utils/theme.js';
 
-// ── Bulletproof Amharic font via @remotion/google-fonts ──
+// ── Bulletproof Amharic font ──
 const { fontFamily: ethiopicFont } = loadEthiopic('normal', {
   weights: ['400', '500', '600', '700', '800'],
   subsets: ['ethiopic', 'latin'],
@@ -86,7 +64,7 @@ export const EOTCVideo = ({
     load();
   }, [fontsHandle]);
 
-  // ── Audio Reactivity: extract amplitude ──
+  // ── Audio Reactivity ──
   const audioSrc = audioFileName ? staticFile(audioFileName) : null;
   const [audioData, setAudioData] = useState(null);
   const [audioHandle] = useState(() => audioSrc ? delayRender('Loading audio data...') : null);
@@ -98,13 +76,9 @@ export const EOTCVideo = ({
         setAudioData(data);
         continueRender(audioHandle);
       })
-      .catch(() => {
-        // Don't block render if audio analysis fails
-        continueRender(audioHandle);
-      });
+      .catch(() => continueRender(audioHandle));
   }, [audioSrc, audioHandle]);
 
-  // ── Compute audio amplitude for current frame ──
   const introFrames = theme.timing.introDuration;
   let audioPulse = 0;
   if (audioData && frame >= introFrames) {
@@ -115,24 +89,40 @@ export const EOTCVideo = ({
         audioData,
         numberOfSamples: 16,
       });
-      // Average the first 4 samples (bass/mid frequencies)
+      // Average bass/mid frequencies for a smooth pulse
       audioPulse = (visualization[0] + visualization[1] + visualization[2] + visualization[3]) / 4;
     } catch {
       audioPulse = 0;
     }
   }
 
-  // ── CAMERA MOVEMENT: slow zoom-out 1.05 → 1.0 ──
-  const cameraScale = interpolate(
-    frame,
-    [0, durationInFrames],
-    [1.05, 1.0],
-    {
-      extrapolateLeft: 'clamp',
-      extrapolateRight: 'clamp',
-      easing: Easing.out(Easing.cubic),
-    }
-  );
+  // ════════════════════════════════════════════════════════════
+  // 📸 VIRTUAL PARALLAX CAMERA ENGINE
+  // Continually wanders through 3D space. Layers move at different
+  // rates to simulate a camera panning through a deep environment.
+  // ════════════════════════════════════════════════════════════
+  
+  // Base camera coordinates (continuous wandering)
+  const panX = Math.sin(frame * 0.0035) * 50; 
+  const panY = Math.cos(frame * 0.0025) * 35;
+  const rotZ = Math.sin(frame * 0.0015) * 2.5; // Dutch angle tilt
+  const cameraZ = Math.sin(frame * 0.004) * 0.06; // Breathing zoom
+  
+  // Intro push-in effect (smooth landing)
+  const introZoom = interpolate(frame, [0, introFrames], [0.15, 0], {
+    extrapolateLeft: 'clamp', extrapolateRight: 'clamp',
+    easing: Easing.out(Easing.cubic)
+  });
+
+  const baseScale = 1.05 + cameraZ + introZoom;
+
+  // Layer multipliers (further away = moves less)
+  // Background
+  const bgTransform = `scale(${baseScale * 1.15}) translate3d(${-panX * 0.2}px, ${-panY * 0.2}px, 0) rotate(${-rotZ * 0.2}deg)`;
+  // Midground (Particles, Rays)
+  const midTransform = `scale(${baseScale * 1.08}) translate3d(${-panX * 0.5}px, ${-panY * 0.5}px, 0) rotate(${-rotZ * 0.5}deg)`;
+  // Foreground (Text, Cross)
+  const fgTransform = `scale(${baseScale}) translate3d(${-panX * 1.1}px, ${-panY * 1.1}px, 0) rotate(${-rotZ}deg)`;
 
   const outroFrames = theme.timing.outroDuration;
   const outroStartFrame = durationInFrames - outroFrames;
@@ -146,46 +136,38 @@ export const EOTCVideo = ({
         overflow: 'hidden',
         backgroundColor: theme.bg.deep,
         fontFamily: ethiopicFont,
+        perspective: '1200px', // Establish 3D space
       }}
     >
-      {/* ── CAMERA ZOOM-OUT WRAPPER ── */}
-      <div
-        style={{
-          position: 'absolute',
-          inset: 0,
-          transform: `scale(${cameraScale})`,
-          transformOrigin: '50% 50%',
-          willChange: 'transform',
-        }}
-      >
-        {/* Layer 1: Animated Background */}
+      {/* ── LAYER 1: BACKGROUND (Deepest) ── */}
+      <div style={{ position: 'absolute', inset: 0, transform: bgTransform, willChange: 'transform' }}>
         <AnimatedBackground />
+      </div>
 
-        {/* Layer 2: Light Rays */}
+      {/* ── LAYER 2: MIDGROUND (Atmosphere) ── */}
+      <div style={{ position: 'absolute', inset: 0, transform: midTransform, willChange: 'transform' }}>
         <LightRays />
-
-        {/* Layer 3: Audio-Reactive Cross */}
-        <CrossWatermark audioPulse={audioPulse} />
-
-        {/* Layer 4: Particles */}
         <ParticleField />
+      </div>
 
-        {/* Layer 5: Audio */}
+      {/* ── LAYER 3: FOREGROUND (Subject) ── */}
+      <div style={{ position: 'absolute', inset: 0, transform: fgTransform, willChange: 'transform' }}>
+        <CrossWatermark audioPulse={audioPulse} />
+        
         {audioSrc && (
           <Sequence from={introFrames}>
             <Audio src={audioSrc} />
           </Sequence>
         )}
 
-        {/* Layer 6: Kinetic Typography */}
         {words.length > 0 && (
           <CaptionOverlay words={words} introFrames={introFrames} />
         )}
+      </div>
 
-        {/* Layer 7: Intro */}
+      {/* ── UI OVERLAYS (Static to Screen) ── */}
+      <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
         <IntroSequence title={title} />
-
-        {/* Layer 8: Outro */}
         <OutroSequence outroStartFrame={outroStartFrame} />
       </div>
     </div>
