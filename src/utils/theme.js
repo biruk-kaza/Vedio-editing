@@ -1,47 +1,60 @@
 /**
- * EOTC Voice Studio — Premium Design Tokens
+ * EOTC Voice Studio — Ultra-Premium Design System
  * 
- * World-class cinematic theme. Centered "pop" captions,
- * massive bold typography, spring physics, gold highlights.
+ * ═══ VISUAL DIRECTION ═══
+ * Theme: Luxury minimalist. Deep black canvas.
+ * Gold: Champagne metallic gradient accents.
+ * Motion: Zero linear easing. All cubic-bezier / spring.
+ * 
+ * ═══ CUSTOM EASING CURVES ═══
+ * glowReveal:  bezier(0.16, 1, 0.3, 1)    — exponential ease-out
+ * springPop:   bezier(0.34, 1.56, 0.64, 1) — spring with overshoot
+ * smoothExit:  bezier(0.4, 0, 0.2, 1)      — Material standard
+ * silkIn:      bezier(0.0, 0.0, 0.2, 1)    — very smooth ease-in
+ * silkOut:     bezier(0.4, 0.0, 1.0, 1.0)  — smooth ease-out
  */
 
 export const theme = {
-  // ── Background Palette ──
+  // ── Deep Black Canvas ──
   bg: {
-    deep: '#050508',
-    gradient1: '#0f0720',
-    gradient2: '#081020',
-    gradient3: '#120810',
-    gradient4: '#0a0818',
+    deep: '#030305',
+    gradient1: '#0c0618',
+    gradient2: '#060d1a',
+    gradient3: '#0e0608',
+    gradient4: '#080614',
   },
 
-  // ── Gold Accent System ──
+  // ── Champagne Gold Accents ──
   gold: {
-    primary: '#d4a574',
-    bright: '#f5d4a0',
-    warm: '#c4915e',
-    hotGlow: '#ffe4a0',
-    glow: 'rgba(245, 212, 160, 0.40)',
-    glowStrong: 'rgba(245, 212, 160, 0.65)',
-    subtle: 'rgba(212, 165, 116, 0.10)',
+    primary: '#c9a96e',
+    bright: '#e8d5a3',
+    warm: '#b8944f',
+    hotGlow: '#f0dea0',
+    metallic: 'linear-gradient(135deg, #c9a96e 0%, #e8d5a3 50%, #c9a96e 100%)',
+    glow: 'rgba(232, 213, 163, 0.35)',
+    glowStrong: 'rgba(232, 213, 163, 0.60)',
+    subtle: 'rgba(201, 169, 110, 0.08)',
   },
 
   // ── Text Colors ──
   text: {
-    primary: '#ffffff',
-    secondary: 'rgba(255, 255, 255, 0.40)',
-    dimmed: 'rgba(255, 255, 255, 0.18)',
-    highlighted: '#ffffff',
+    // Active words illuminate to bright white-gold
+    active: '#f5edd8',
+    // Past words settle to clean muted tone
+    past: 'rgba(220, 215, 205, 0.75)',
+    // Future words are barely visible
+    future: 'rgba(180, 175, 165, 0.28)',
+    // Intro/outro text
+    primary: '#f0ebe0',
   },
 
-  // ── Particle / FX Colors ──
+  // ── Particle FX ──
   fx: {
-    particle: 'rgba(212, 165, 116, 0.55)',
-    particleBright: 'rgba(245, 212, 160, 0.85)',
-    particleWhite: 'rgba(255, 255, 255, 0.4)',
-    ray: 'rgba(212, 165, 116, 0.025)',
-    rayBright: 'rgba(240, 201, 135, 0.05)',
-    cross: 'rgba(212, 165, 116, 0.05)',
+    particle: 'rgba(201, 169, 110, 0.45)',
+    particleBright: 'rgba(232, 213, 163, 0.70)',
+    particleWhite: 'rgba(255, 255, 255, 0.25)',
+    ray: 'rgba(201, 169, 110, 0.02)',
+    rayBright: 'rgba(232, 213, 163, 0.04)',
   },
 
   // ── Typography ──
@@ -50,41 +63,45 @@ export const theme = {
     display: "'Inter', 'Noto Sans', sans-serif",
   },
 
-  // ── Caption Styling — CENTERED, MASSIVE, BOLD ──
+  // ── Caption Layout — 1-3 words, centered, massive ──
   caption: {
-    fontSize: 72,
-    fontWeight: 800,
-    lineHeight: 1.35,
-    maxWidth: 950,
-    wordGap: 16,
-    highlightScale: 1.12,
-    glowRadius: 28,
+    fontSize: 68,
+    fontWeight: 700,
+    lineHeight: 1.4,
+    maxWidth: 920,
+    wordGap: 18,
     wordsPerLine: 3,
-    // Text stroke for readability over any background
-    stroke: {
-      width: 3,
-      color: 'rgba(0, 0, 0, 0.7)',
-    },
+    // Glow reveal scale range
+    scaleFrom: 0.94,
+    scaleTo: 1.0,
+    // Active word highlight scale
+    highlightScale: 1.06,
+    // Glow radius for active word
+    glowRadius: 22,
+    // Text stroke
+    stroke: { width: 2.5, color: 'rgba(0, 0, 0, 0.65)' },
   },
 
-  // ── Video Dimensions (9:16 TikTok/Reels) ──
+  // ── Video ──
   video: {
     width: 1080,
     height: 1920,
     fps: 30,
   },
 
-  // ── Animation Timings ──
+  // ── Timing ──
   timing: {
-    introFadeDuration: 45,
-    outroFadeDuration: 45,
     introDuration: 90,
     outroDuration: 90,
-    captionFadeIn: 6,
-    captionFadeOut: 10,
-    // Caption timing offset — positive = later (fix "too fast")
-    captionOffsetSec: 0.12,
-    // Word spring config — buttery pop
-    wordSpring: { damping: 12, mass: 0.4, stiffness: 200 },
+    // Glow reveal entrance duration (frames)
+    revealFrames: 14,
+    // Exit drift duration (frames)
+    exitFrames: 12,
+    // Word stagger delay (frames between each word)
+    wordStagger: 2,
+    // Caption offset — positive = words appear later (fixes "too fast")
+    captionOffsetSec: 0.10,
+    // Spring config for word pop
+    wordSpring: { damping: 13, mass: 0.4, stiffness: 180 },
   },
 };

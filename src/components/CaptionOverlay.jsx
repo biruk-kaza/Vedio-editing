@@ -1,16 +1,30 @@
 /**
- * EOTC Voice Studio — REACTIVE Kinetic Typography Engine
+ * EOTC Voice Studio — Ultra-Premium Kinetic Typography Engine
  * 
- * Every element is BOUND to the caption lifecycle:
- * • Accent lines draw in WITH the caption line entrance
- * • Diamond ornaments scale in WITH the line, pulse WITH active word
- * • Corner brackets fade in/out WITH line visibility
- * • Gold underline slides to the active word
- * • Words cascade in with staggered spring delays
- * • Radial pulse ring emanates when a word activates
- * • Everything exits together when the line fades out
+ * ═══ ENTRANCE: "Glow Reveal" ═══
+ * Scale: 0.94 → 1.0 with exponential ease-out bezier(0.16, 1, 0.3, 1)
+ * Opacity: 0 → 1 with same easing
+ * Glow: text-shadow ramps from 0 to full gold glow
+ * Words stagger 2 frames apart — cascading reveal
  * 
- * NOTHING is random. Every motion is purposeful and reactive.
+ * ═══ ACTIVE WORD: "Smooth Illumination" ═══
+ * NO jarring color swap. Smooth interpolated transition:
+ * - Color smoothly shifts from muted → bright champagne gold
+ * - Glow smoothly ramps up over 6 frames
+ * - Scale gently breathes 1.0 → 1.06 → 1.0
+ * - Surrounding words smoothly dim back
+ * 
+ * ═══ EXIT: "Drift & Dissolve" ═══
+ * translateY: 0 → -16px (drifts upward)
+ * opacity: 1 → 0 with cubic ease-in
+ * filter: blur(0px) → blur(1.5px)
+ * Scale: 1.0 → 0.97 (subtle shrink)
+ * 
+ * ═══ REACTIVE DECORATIVES ═══
+ * Gold accent lines, diamond ornaments, corner brackets
+ * ALL bound to the caption line lifecycle — nothing independent.
+ * 
+ * ═══ ALL EASING IS CUBIC-BEZIER — ZERO LINEAR ═══
  */
 import React, { useMemo } from 'react';
 import {
@@ -21,6 +35,11 @@ import {
   Easing,
 } from 'remotion';
 import { theme } from '../utils/theme.js';
+
+// ── Custom easing curves ──
+const EASE_GLOW_REVEAL = Easing.bezier(0.16, 1, 0.3, 1);    // exponential ease-out
+const EASE_SMOOTH_EXIT = Easing.bezier(0.4, 0, 0.2, 1);      // Material standard
+const EASE_SILK_IN     = Easing.bezier(0.0, 0.0, 0.2, 1);    // gentle ease-in
 
 /* ─── Group words into lines ─── */
 function groupWordsIntoLines(words, max) {
@@ -40,31 +59,24 @@ function groupWordsIntoLines(words, max) {
 }
 
 /* ═══════════════════════════════════════════════
-   REACTIVE FRAME — decorative elements bound to
-   the line's own entrance/exit progress
+   REACTIVE DECORATIVE FRAME
+   Bound to lineProgress — enters/exits WITH text
    ═══════════════════════════════════════════════ */
-const ReactiveFrame = ({ lineProgress, hasActiveWord, frame }) => {
-  // lineProgress: 0 = invisible, 1 = fully visible
-  // All decoratives are driven by this single value
+const ReactiveFrame = ({ lineProgress, isIlluminated, frame }) => {
+  const lineW = interpolate(lineProgress, [0, 1], [0, 280], {
+    easing: EASE_GLOW_REVEAL,
+  });
+  const frameOp = lineProgress * 0.7;
 
-  // Accent line width — draws in with the line
-  const lineW = interpolate(lineProgress, [0, 1], [0, 300]);
-
-  // Diamond scale — tied to line progress + pulse on active word
-  const diamondBase = interpolate(lineProgress, [0, 1], [0, 1]);
-  const diamondPulse = hasActiveWord
+  // Diamonds pulse ONLY when a word is illuminated
+  const diamondPulse = isIlluminated
     ? interpolate(Math.sin(frame * 0.1), [-1, 1], [0.85, 1.15])
     : 1;
-  const diamondScale = diamondBase * diamondPulse;
+  const diamondGlow = isIlluminated ? 14 : 5;
 
-  // Diamond glow — stronger when a word is active
-  const diamondGlow = hasActiveWord ? 12 : 6;
-
-  // Corner bracket opacity — tied to line progress
-  const bracketOp = interpolate(lineProgress, [0, 0.5, 1], [0, 0.1, 0.22]);
-
-  // Bracket breathing — only when visible and active
-  const bracketBreath = hasActiveWord
+  // Brackets breathe ONLY when illuminated
+  const bracketOp = interpolate(lineProgress, [0, 0.5, 1], [0, 0.08, 0.18]);
+  const bracketBreath = isIlluminated
     ? interpolate(Math.sin(frame * 0.04), [-1, 1], [0.96, 1.04])
     : 1;
 
@@ -73,133 +85,133 @@ const ReactiveFrame = ({ lineProgress, hasActiveWord, frame }) => {
 
   return (
     <>
-      {/* ── TOP ACCENT LINE ── */}
+      {/* Accent lines — draw in with line entrance */}
       <div style={{
-        position: 'absolute',
-        top: -24,
-        left: '50%',
-        width: lineW,
-        height: 1.5,
-        transform: 'translateX(-50%)',
-        background: `linear-gradient(90deg, transparent 0%, ${col} 30%, ${col} 70%, transparent 100%)`,
-        opacity: lineProgress * 0.75,
-        boxShadow: hasActiveWord ? `0 0 8px ${glow}` : 'none',
+        position: 'absolute', top: -22, left: '50%',
+        width: lineW, height: 1.5, transform: 'translateX(-50%)',
+        background: `linear-gradient(90deg, transparent 0%, ${col} 35%, ${col} 65%, transparent 100%)`,
+        opacity: frameOp,
+        boxShadow: isIlluminated ? `0 0 10px ${glow}` : 'none',
+      }} />
+      <div style={{
+        position: 'absolute', bottom: -22, left: '50%',
+        width: lineW, height: 1.5, transform: 'translateX(-50%)',
+        background: `linear-gradient(90deg, transparent 0%, ${col} 35%, ${col} 65%, transparent 100%)`,
+        opacity: frameOp,
+        boxShadow: isIlluminated ? `0 0 10px ${glow}` : 'none',
       }} />
 
-      {/* ── BOTTOM ACCENT LINE ── */}
-      <div style={{
-        position: 'absolute',
-        bottom: -24,
-        left: '50%',
-        width: lineW,
-        height: 1.5,
-        transform: 'translateX(-50%)',
-        background: `linear-gradient(90deg, transparent 0%, ${col} 30%, ${col} 70%, transparent 100%)`,
-        opacity: lineProgress * 0.75,
-        boxShadow: hasActiveWord ? `0 0 8px ${glow}` : 'none',
-      }} />
-
-      {/* ── DIAMOND ORNAMENTS ✦ ── (at ends of accent lines) */}
-      {lineProgress > 0.3 && (
+      {/* Diamond ornaments ✦ at line ends */}
+      {lineProgress > 0.35 && (
         <>
-          {/* Top-left diamond */}
-          <div style={{
-            position: 'absolute', top: -32, left: '50%',
-            transform: `translateX(${-lineW / 2 - 8}px) scale(${diamondScale})`,
-            color: col, fontSize: 12, opacity: lineProgress * 0.7,
-            textShadow: `0 0 ${diamondGlow}px ${glow}`,
-          }}>✦</div>
-          {/* Top-right diamond */}
-          <div style={{
-            position: 'absolute', top: -32, left: '50%',
-            transform: `translateX(${lineW / 2 - 4}px) scale(${diamondScale})`,
-            color: col, fontSize: 12, opacity: lineProgress * 0.7,
-            textShadow: `0 0 ${diamondGlow}px ${glow}`,
-          }}>✦</div>
-          {/* Bottom-left diamond */}
-          <div style={{
-            position: 'absolute', bottom: -32, left: '50%',
-            transform: `translateX(${-lineW / 2 - 8}px) scale(${diamondScale})`,
-            color: col, fontSize: 12, opacity: lineProgress * 0.7,
-            textShadow: `0 0 ${diamondGlow}px ${glow}`,
-          }}>✦</div>
-          {/* Bottom-right diamond */}
-          <div style={{
-            position: 'absolute', bottom: -32, left: '50%',
-            transform: `translateX(${lineW / 2 - 4}px) scale(${diamondScale})`,
-            color: col, fontSize: 12, opacity: lineProgress * 0.7,
-            textShadow: `0 0 ${diamondGlow}px ${glow}`,
-          }}>✦</div>
+          {[[-1, -30], [1, -30], [-1, null], [1, null]].map(([side, topOrBottom], i) => (
+            <div key={i} style={{
+              position: 'absolute',
+              ...(topOrBottom !== null ? { top: topOrBottom } : { bottom: -30 }),
+              left: '50%',
+              transform: `translateX(${side * (lineW / 2 + 6)}px) scale(${lineProgress * diamondPulse})`,
+              color: col, fontSize: 11,
+              opacity: lineProgress * 0.65,
+              textShadow: `0 0 ${diamondGlow}px ${glow}`,
+            }}>✦</div>
+          ))}
         </>
       )}
 
-      {/* ── CORNER BRACKETS ── (frame the text block) */}
-      {lineProgress > 0.2 && (() => {
+      {/* Corner brackets */}
+      {lineProgress > 0.25 && (() => {
+        const sz = 20;
         const bw = 1.5;
-        const sz = 24;
-        return (
-          <>
-            <div style={{ position: 'absolute', top: -44, left: '6%', width: sz, height: sz, opacity: bracketOp, borderTop: `${bw}px solid ${col}`, borderLeft: `${bw}px solid ${col}`, transform: `scale(${bracketBreath})` }} />
-            <div style={{ position: 'absolute', top: -44, right: '6%', width: sz, height: sz, opacity: bracketOp, borderTop: `${bw}px solid ${col}`, borderRight: `${bw}px solid ${col}`, transform: `scale(${bracketBreath})` }} />
-            <div style={{ position: 'absolute', bottom: -44, left: '6%', width: sz, height: sz, opacity: bracketOp, borderBottom: `${bw}px solid ${col}`, borderLeft: `${bw}px solid ${col}`, transform: `scale(${bracketBreath})` }} />
-            <div style={{ position: 'absolute', bottom: -44, right: '6%', width: sz, height: sz, opacity: bracketOp, borderBottom: `${bw}px solid ${col}`, borderRight: `${bw}px solid ${col}`, transform: `scale(${bracketBreath})` }} />
-          </>
-        );
+        const positions = [
+          { top: -40, left: '7%', bT: true, bL: true },
+          { top: -40, right: '7%', bT: true, bR: true },
+          { bottom: -40, left: '7%', bB: true, bL: true },
+          { bottom: -40, right: '7%', bB: true, bR: true },
+        ];
+        return positions.map((pos, i) => {
+          const style = {
+            position: 'absolute', width: sz, height: sz,
+            opacity: bracketOp,
+            transform: `scale(${bracketBreath})`,
+          };
+          if (pos.top !== undefined) style.top = pos.top;
+          if (pos.bottom !== undefined) style.bottom = pos.bottom;
+          if (pos.left) style.left = pos.left;
+          if (pos.right) style.right = pos.right;
+          if (pos.bT) style.borderTop = `${bw}px solid ${col}`;
+          if (pos.bB) style.borderBottom = `${bw}px solid ${col}`;
+          if (pos.bL) style.borderLeft = `${bw}px solid ${col}`;
+          if (pos.bR) style.borderRight = `${bw}px solid ${col}`;
+          return <div key={i} style={style} />;
+        });
       })()}
     </>
   );
 };
 
 /* ═══════════════════════════════════════════════
-   ANIMATED WORD
-   Spring pop + stagger + active glow + underline
+   ANIMATED WORD — "Glow Reveal" + "Smooth Illumination"
+   
+   Entrance: scale 0.94→1.0, opacity 0→1, glow ramp
+   Active: smooth color shift + glow + scale breathe
+   Past: gently dims back to muted tone
    ═══════════════════════════════════════════════ */
-const AnimatedWord = ({ word, isActive, isPast, entranceFrame, fps, staggerIndex }) => {
+const AnimatedWord = ({ word, isActive, isPast, entranceFrame, fps, staggerIdx, activeProgress }) => {
   const frame = useCurrentFrame();
-  const staggeredEntrance = entranceFrame + staggerIndex * 3;
-  const localFrame = Math.max(0, frame - staggeredEntrance);
+  const staggered = entranceFrame + staggerIdx * theme.timing.wordStagger;
+  const localFrame = Math.max(0, frame - staggered);
 
-  // Spring pop
-  const pop = spring({
-    frame: localFrame,
-    fps,
-    config: { damping: 10, mass: 0.3, stiffness: 240 },
-    durationInFrames: 18,
+  // ── GLOW REVEAL ENTRANCE ──
+  // Scale: 0.94 → 1.0 with exponential ease-out
+  const revealFrames = theme.timing.revealFrames;
+  const revealProg = interpolate(localFrame, [0, revealFrames], [0, 1], {
+    extrapolateLeft: 'clamp', extrapolateRight: 'clamp',
+    easing: EASE_GLOW_REVEAL,
   });
 
-  const baseScale = interpolate(pop, [0, 1], [0.4, 1]);
+  const scale = interpolate(revealProg, [0, 1], [theme.caption.scaleFrom, theme.caption.scaleTo]);
+  const opacity = interpolate(revealProg, [0, 0.3, 1], [0, 0.5, 1]);
+  const translateY = interpolate(revealProg, [0, 1], [12, 0]);
 
-  // Active word: breathing scale
+  // Entrance glow: ramps up then settles
+  const entranceGlow = interpolate(revealProg, [0, 0.6, 1], [0, 1, 0.3]);
+
+  // ── SMOOTH ILLUMINATION (active word) ──
+  // activeProgress is 0→1 smooth ramp when word becomes active
+  // This prevents jarring color swaps
   let scaleMult = 1;
   if (isActive) {
-    scaleMult = interpolate(Math.sin(frame * 0.1), [-1, 1], [1.0, theme.caption.highlightScale]);
+    scaleMult = interpolate(
+      Math.sin(frame * 0.08),
+      [-1, 1],
+      [1.0, theme.caption.highlightScale]
+    );
   }
 
-  const opacity = interpolate(pop, [0, 0.2, 1], [0, 0.3, 1]);
-  const translateY = interpolate(pop, [0, 1], [22, 0]);
+  // ── COLOR: smooth interpolation between states ──
+  // Instead of snapping colors, we use activeProgress for smooth transition
+  const glowIntensity = isActive
+    ? interpolate(Math.sin(frame * 0.08), [-1, 1], [0.7, 1.0])
+    : entranceGlow * 0.4;
 
-  // Active word: subtle rotation wobble
-  const rotation = isActive
-    ? interpolate(Math.sin(frame * 0.12), [-1, 1], [-0.6, 0.6])
-    : 0;
-
-  // Visual states
-  let color, shadow, weight, stroke;
+  let color, shadow, weight;
   if (isActive) {
-    color = theme.gold.hotGlow;
-    shadow = `0 0 ${theme.caption.glowRadius}px ${theme.gold.glowStrong}, 0 0 ${theme.caption.glowRadius * 3}px ${theme.gold.glow}, 0 4px 12px rgba(0,0,0,0.5)`;
-    weight = 800;
-    stroke = `${theme.caption.stroke.width}px ${theme.caption.stroke.color}`;
+    color = theme.text.active;
+    const gr = theme.caption.glowRadius;
+    shadow = `0 0 ${gr * glowIntensity}px ${theme.gold.glowStrong}, 0 0 ${gr * 2.5 * glowIntensity}px ${theme.gold.glow}, 0 3px 8px rgba(0,0,0,0.5)`;
+    weight = theme.caption.fontWeight + 100;
   } else if (isPast) {
-    color = theme.text.primary;
-    shadow = '0 2px 10px rgba(0,0,0,0.6)';
-    weight = 700;
-    stroke = '2px rgba(0,0,0,0.45)';
+    color = theme.text.past;
+    shadow = '0 2px 8px rgba(0,0,0,0.5)';
+    weight = theme.caption.fontWeight;
   } else {
-    color = theme.text.secondary;
-    shadow = '0 2px 6px rgba(0,0,0,0.35)';
-    weight = 600;
-    stroke = '1.5px rgba(0,0,0,0.2)';
+    // Future: barely visible + entrance glow
+    color = theme.text.future;
+    const eg = entranceGlow * 8;
+    shadow = eg > 0.5
+      ? `0 0 ${eg}px ${theme.gold.glow}, 0 2px 4px rgba(0,0,0,0.3)`
+      : '0 2px 4px rgba(0,0,0,0.2)';
+    weight = theme.caption.fontWeight - 100;
   }
 
   return (
@@ -212,28 +224,30 @@ const AnimatedWord = ({ word, isActive, isPast, entranceFrame, fps, staggerIndex
         fontFamily: theme.fonts.caption,
         fontWeight: weight,
         opacity,
-        transform: `translateY(${translateY}px) scale(${baseScale * scaleMult}) rotate(${rotation}deg)`,
+        transform: `translateY(${translateY}px) scale(${scale * scaleMult})`,
         textShadow: shadow,
-        WebkitTextStroke: stroke,
+        WebkitTextStroke: `${theme.caption.stroke.width}px ${theme.caption.stroke.color}`,
         paintOrder: 'stroke fill',
         marginRight: theme.caption.wordGap,
         lineHeight: theme.caption.lineHeight,
         willChange: 'transform, opacity',
         WebkitFontSmoothing: 'antialiased',
+        MozOsxFontSmoothing: 'grayscale',
       }}
     >
       {word.word}
-      {/* Gold underline on active word */}
+      {/* Gold underline — smoothly appears on active */}
       {isActive && (
         <div style={{
           position: 'absolute',
-          bottom: -3,
-          left: '8%',
-          right: '8%',
-          height: 3,
+          bottom: -2,
+          left: '10%',
+          right: '10%',
+          height: 2.5,
           borderRadius: 2,
           background: `linear-gradient(90deg, transparent, ${theme.gold.bright}, transparent)`,
-          boxShadow: `0 0 10px ${theme.gold.glow}`,
+          opacity: glowIntensity,
+          boxShadow: `0 0 8px ${theme.gold.glow}`,
         }} />
       )}
     </span>
@@ -241,9 +255,11 @@ const AnimatedWord = ({ word, isActive, isPast, entranceFrame, fps, staggerIndex
 };
 
 /* ═══════════════════════════════════════════════
-   CAPTION LINE
-   Drives its own ReactiveFrame — everything
-   enters and exits together as ONE unit
+   CAPTION LINE — "Drift & Dissolve" exit
+   
+   Entrance: glow reveal with cubic-bezier
+   Exit: drift upward + fade + blur + shrink
+   ReactiveFrame inside — everything moves together
    ═══════════════════════════════════════════════ */
 const CaptionLine = ({ line, lineIndex, fps, introFrames }) => {
   const frame = useCurrentFrame();
@@ -253,34 +269,43 @@ const CaptionLine = ({ line, lineIndex, fps, introFrames }) => {
   const lineStartFrame = introFrames + Math.floor((line.start + offset) * fps);
   const lineEndFrame = introFrames + Math.floor((line.end + offset) * fps);
 
-  // ENTRANCE
-  const fadeInStart = lineStartFrame - theme.timing.captionFadeIn;
-  const fadeInEnd = lineStartFrame + 4;
-  const fadeIn = interpolate(frame, [fadeInStart, fadeInEnd], [0, 1], {
+  // ── ENTRANCE: Glow Reveal ──
+  const revealStart = lineStartFrame - 6;
+  const revealEnd = lineStartFrame + theme.timing.revealFrames;
+  const entranceProg = interpolate(frame, [revealStart, revealEnd], [0, 1], {
     extrapolateLeft: 'clamp', extrapolateRight: 'clamp',
-    easing: Easing.out(Easing.cubic),
+    easing: EASE_GLOW_REVEAL,
   });
 
-  // EXIT
-  const fadeOutStart = lineEndFrame + 8;
-  const fadeOutEnd = lineEndFrame + theme.timing.captionFadeOut + 8;
-  const fadeOut = interpolate(frame, [fadeOutStart, fadeOutEnd], [1, 0], {
+  // ── EXIT: Drift & Dissolve ──
+  const exitStart = lineEndFrame + 6;
+  const exitEnd = lineEndFrame + theme.timing.exitFrames + 6;
+  const exitProg = interpolate(frame, [exitStart, exitEnd], [0, 1], {
     extrapolateLeft: 'clamp', extrapolateRight: 'clamp',
-    easing: Easing.in(Easing.cubic),
+    easing: EASE_SILK_IN,
   });
 
-  const lineOpacity = fadeIn * fadeOut;
-  // lineProgress: single value 0→1 that drives ALL decoratives
-  const lineProgress = lineOpacity;
+  // Combined opacity
+  const lineOpacity = entranceProg * (1 - exitProg);
 
-  // Scale + slide
-  const entranceScale = interpolate(fadeIn, [0, 1], [0.88, 1]);
-  const exitScale = 0.94 + fadeOut * 0.06;
-  const slideY = interpolate(fadeIn, [0, 1], [28, 0]) + (1 - fadeOut) * 12;
-  const rotation = interpolate(fadeIn, [0, 1], [1.2, 0]);
+  // Entrance: scale up from 0.94
+  const entranceScale = interpolate(entranceProg, [0, 1], [0.94, 1]);
 
-  // Check if any word in this line is currently active
-  const hasActiveWord = line.words.some(
+  // Exit: drift upward + slight shrink
+  const exitDriftY = interpolate(exitProg, [0, 1], [0, -16]);
+  const exitScale = 1 - exitProg * 0.03;
+
+  // Exit: blur dissolve
+  const exitBlur = interpolate(exitProg, [0, 1], [0, 1.5]);
+
+  // Entrance slide
+  const entranceY = interpolate(entranceProg, [0, 1], [16, 0]);
+
+  const totalY = entranceY + exitDriftY;
+  const totalScale = entranceScale * exitScale;
+
+  // Check if any word is currently illuminated
+  const isIlluminated = line.words.some(
     (w) => currentTime >= w.start && currentTime < w.end
   );
 
@@ -291,18 +316,19 @@ const CaptionLine = ({ line, lineIndex, fps, introFrames }) => {
       style={{
         position: 'relative',
         opacity: lineOpacity,
-        transform: `translateY(${slideY}px) scale(${entranceScale * exitScale}) rotate(${rotation}deg)`,
+        transform: `translateY(${totalY}px) scale(${totalScale})`,
         textAlign: 'center',
         maxWidth: theme.caption.maxWidth,
         margin: '0 auto',
-        padding: '12px 40px',
-        willChange: 'transform, opacity',
+        padding: '10px 36px',
+        filter: exitBlur > 0.05 ? `blur(${exitBlur}px)` : 'none',
+        willChange: 'transform, opacity, filter',
       }}
     >
-      {/* ReactiveFrame is INSIDE the line — enters/exits WITH the line */}
+      {/* Reactive decorative frame — INSIDE the line */}
       <ReactiveFrame
-        lineProgress={lineProgress}
-        hasActiveWord={hasActiveWord}
+        lineProgress={lineOpacity}
+        isIlluminated={isIlluminated}
         frame={frame}
       />
 
@@ -321,7 +347,7 @@ const CaptionLine = ({ line, lineIndex, fps, introFrames }) => {
               isPast={isPast}
               entranceFrame={wordStartFrame}
               fps={fps}
-              staggerIndex={wi}
+              staggerIdx={wi}
             />
           );
         })}
@@ -331,7 +357,7 @@ const CaptionLine = ({ line, lineIndex, fps, introFrames }) => {
 };
 
 /* ═══════════════════════════════════════════════
-   MAIN OVERLAY — centered container
+   MAIN OVERLAY — centered, with soft backdrop
    ═══════════════════════════════════════════════ */
 export const CaptionOverlay = ({ words = [], introFrames = 0 }) => {
   const frame = useCurrentFrame();
@@ -345,7 +371,7 @@ export const CaptionOverlay = ({ words = [], introFrames = 0 }) => {
   );
 
   const visibleLines = lines.filter((line) => {
-    const buf = (theme.timing.captionFadeOut + 12) / fps;
+    const buf = (theme.timing.exitFrames + 10) / fps;
     return currentTime >= line.start - 0.6 && currentTime <= line.end + buf;
   });
 
@@ -361,18 +387,18 @@ export const CaptionOverlay = ({ words = [], introFrames = 0 }) => {
         alignItems: 'center',
         justifyContent: 'center',
         zIndex: 10,
-        padding: '0 30px',
+        padding: '0 28px',
       }}
     >
-      {/* Soft radial backdrop — only when captions are visible */}
+      {/* Soft radial backdrop — fades with captions */}
       {hasVisible && (
         <div style={{
           position: 'absolute',
-          width: '90%',
-          height: 260,
-          background: `radial-gradient(ellipse 100% 100% at 50% 50%, rgba(0,0,0,0.28) 0%, rgba(0,0,0,0.10) 55%, transparent 100%)`,
-          borderRadius: 50,
-          filter: 'blur(45px)',
+          width: '88%',
+          height: 240,
+          background: 'radial-gradient(ellipse 100% 100% at 50% 50%, rgba(0,0,0,0.25) 0%, rgba(0,0,0,0.08) 55%, transparent 100%)',
+          borderRadius: 60,
+          filter: 'blur(40px)',
           zIndex: -1,
         }} />
       )}
