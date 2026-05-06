@@ -12,16 +12,23 @@
     "transcribe": "node src/transcribe.js"
   },
   "keywords": [
-    "eotc", "amharic", "whisper", "remotion",
-    "tiktok", "video", "motion-graphics", "orthodox"
+    "eotc",
+    "amharic",
+    "whisper",
+    "remotion",
+    "tiktok",
+    "video",
+    "motion-graphics",
+    "orthodox"
   ],
   "author": "EOTC Voice Studio",
   "license": "MIT",
   "dependencies": {
     "@remotion/cli": "4.0.242",
-    "remotion": "4.0.242",
+    "@remotion/google-fonts": "^4.0.242",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-dom": "^18.3.1",
+    "remotion": "4.0.242"
   },
   "engines": {
     "node": ">=20.0.0"

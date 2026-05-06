@@ -1,27 +1,35 @@
 /**
  * EOTC Voice Studio — After Effects-Grade Kinetic Typography
  * 
- * ═══ AFTER EFFECTS ANIMATION PRINCIPLES ═══
+ * ═══ EXACT MOTION DESIGN SPECS ═══
  * 
- * 1. LOCKED ANCHOR POINT
- *    The text container is fixed-height at screen center.
- *    Text grows downward from a stable baseline.
- *    No vertical jitter when switching between 1-line and 2-line states.
+ * 1. SPRING PHYSICS (no CSS transitions)
+ *    All motion uses Remotion's spring() and interpolate() with
+ *    custom cubic-bezier easing. Zero linear animations.
  * 
- * 2. FLUID BRACKET SCALING
- *    Corner brackets and accent lines use spring physics.
- *    They smoothly GLIDE to frame the new text — never snap.
+ * 2. KINETIC ENTRY (15 frames)
+ *    - Y-axis: +20px → 0px
+ *    - Scale: 0.95 → 1.0
+ *    - Opacity: 0 → 1
+ *    - Easing: bezier(0.16, 1, 0.3, 1) — exponential ease-out
  * 
- * 3. OVERLAPPING TRANSITIONS
- *    No hard cuts. Outgoing line drifts up 12px + fades out over 9 frames.
- *    Incoming line scales 0.95→1.0 + fades in simultaneously.
- *    5-frame overlap window creates continuous flow.
+ * 3. EXIT OVERLAP
+ *    - Y-axis: 0 → -20px (drifts up)
+ *    - Opacity: 1 → 0
+ *    - Scale: 1.0 → 0.97
+ *    - Blur: 0 → 1.5px
+ *    - Overlaps next phrase entrance by 5 frames
  * 
- * 4. ACTIVE WORD GLOW FILTER
- *    Active word gets CSS filter: brightness(1.4) + drop-shadow blur,
- *    not just a hex color swap.
+ * 4. SPRING-LOADED BRACKETS
+ *    - Width dynamically computed from text character count
+ *    - Animated via spring({ damping: 14, stiffness: 120 })
+ *    - Slight bounce on entrance
  * 
- * ═══ ALL MOTION: cubic-bezier / spring — ZERO linear ═══
+ * 5. WORD-LEVEL HIGHLIGHTING
+ *    - Each word tracked by its own start/end timestamps
+ *    - Active: smooth gold color + brightness(1.35) filter + drop-shadow
+ *    - Inactive: muted white/grey
+ *    - No jarring color snaps — smooth interpolated transition
  */
 import React, { useMemo } from 'react';
 import {
@@ -36,7 +44,18 @@ import { theme } from '../utils/theme.js';
 // ── Custom easing curves ──
 const EASE_GLOW_REVEAL = Easing.bezier(0.16, 1, 0.3, 1);
 const EASE_SILK_IN     = Easing.bezier(0.0, 0.0, 0.2, 1);
-const EASE_SPRING_OUT  = Easing.bezier(0.34, 1.56, 0.64, 1);
+
+// ── Dynamic bracket sizing ──
+const CHAR_WIDTH_PX = 41; // Amharic avg at 68px font
+const MIN_BRACKET_WIDTH = 120;
+const MAX_BRACKET_WIDTH = 640;
+const BRACKET_PADDING = 60;
+
+function estimateLineWidth(words) {
+  const chars = words.reduce((s, w) => s + w.word.length, 0);
+  const gaps = Math.max(0, words.length - 1) * theme.caption.wordGap;
+  return Math.max(MIN_BRACKET_WIDTH, Math.min(MAX_BRACKET_WIDTH, chars * CHAR_WIDTH_PX + gaps + BRACKET_PADDING));
+}
 
 /* ─── Group words into lines ─── */
 function groupWordsIntoLines(words, max) {
@@ -56,32 +75,27 @@ function groupWordsIntoLines(words, max) {
 }
 
 /* ═══════════════════════════════════════════════
-   FLUID REACTIVE FRAME
+   SPRING-LOADED DYNAMIC BRACKETS
    
-   Brackets and accent lines use SPRING PHYSICS
-   to smoothly glide to their target dimensions.
-   They NEVER snap — always ease into position.
+   spring({ damping: 14, stiffness: 120 })
+   Width computed from character count — animates with bounce
    ═══════════════════════════════════════════════ */
-const FluidFrame = ({ entranceSpring, isIlluminated, frame }) => {
-  // entranceSpring is a spring value 0→1 with overshoot
-  // This drives smooth bracket scaling
+const DynamicBrackets = ({ bracketSpring, targetWidth, isIlluminated, frame }) => {
+  const lineW = interpolate(bracketSpring, [0, 1], [0, targetWidth]);
+  const frameOp = interpolate(bracketSpring, [0, 0.3, 1], [0, 0.35, 0.7]);
 
-  // Accent line width — spring-driven, smooth glide
-  const lineW = interpolate(entranceSpring, [0, 1], [0, 280]);
-  const frameOp = interpolate(entranceSpring, [0, 0.3, 1], [0, 0.4, 0.7]);
-
-  // Diamond pulse — only when illuminated
   const diamondPulse = isIlluminated
     ? interpolate(Math.sin(frame * 0.1), [-1, 1], [0.88, 1.12])
     : 1;
   const diamondGlow = isIlluminated ? 14 : 5;
 
-  // Bracket dimensions — spring-driven (fluid, never snapping)
-  const bracketScale = interpolate(entranceSpring, [0, 1], [0.3, 1]);
-  const bracketOp = interpolate(entranceSpring, [0, 0.4, 1], [0, 0.06, 0.20]);
+  const bracketScale = interpolate(bracketSpring, [0, 1], [0.15, 1]);
+  const bracketOp = interpolate(bracketSpring, [0, 0.4, 1], [0, 0.05, 0.20]);
   const bracketBreath = isIlluminated
     ? interpolate(Math.sin(frame * 0.04), [-1, 1], [0.96, 1.04])
     : 1;
+
+  const bracketInset = Math.max(20, (920 - targetWidth) / 2 - 10);
 
   const col = theme.gold.primary;
   const glow = theme.gold.glow;
@@ -90,74 +104,46 @@ const FluidFrame = ({ entranceSpring, isIlluminated, frame }) => {
 
   return (
     <>
-      {/* ── ACCENT LINES — spring-animated width ── */}
+      {/* DYNAMIC ACCENT LINES — width tracks text block */}
       <div style={{
         position: 'absolute', top: -22, left: '50%',
         width: lineW, height: 1.5, transform: 'translateX(-50%)',
-        background: `linear-gradient(90deg, transparent 0%, ${col} 35%, ${col} 65%, transparent 100%)`,
+        background: `linear-gradient(90deg, transparent 0%, ${col} 30%, ${col} 70%, transparent 100%)`,
         opacity: frameOp,
         boxShadow: isIlluminated ? `0 0 10px ${glow}` : 'none',
       }} />
       <div style={{
         position: 'absolute', bottom: -22, left: '50%',
         width: lineW, height: 1.5, transform: 'translateX(-50%)',
-        background: `linear-gradient(90deg, transparent 0%, ${col} 35%, ${col} 65%, transparent 100%)`,
+        background: `linear-gradient(90deg, transparent 0%, ${col} 30%, ${col} 70%, transparent 100%)`,
         opacity: frameOp,
         boxShadow: isIlluminated ? `0 0 10px ${glow}` : 'none',
       }} />
 
-      {/* ── DIAMONDS ✦ — positioned at accent line ends ── */}
-      {entranceSpring > 0.35 && (
+      {/* DIAMONDS at accent endpoints */}
+      {bracketSpring > 0.35 && (
         <>
           {[[-1, 'top'], [1, 'top'], [-1, 'bottom'], [1, 'bottom']].map(([side, vert], i) => (
             <div key={i} style={{
               position: 'absolute',
               ...(vert === 'top' ? { top: -30 } : { bottom: -30 }),
               left: '50%',
-              transform: `translateX(${side * (lineW / 2 + 6)}px) scale(${entranceSpring * diamondPulse})`,
+              transform: `translateX(${side * (lineW / 2 + 6)}px) scale(${bracketSpring * diamondPulse})`,
               color: col, fontSize: 11,
-              opacity: entranceSpring * 0.6,
+              opacity: bracketSpring * 0.6,
               textShadow: `0 0 ${diamondGlow}px ${glow}`,
             }}>✦</div>
           ))}
         </>
       )}
 
-      {/* ── CORNER BRACKETS — fluid spring-scaled ── */}
-      {entranceSpring > 0.15 && (
+      {/* CORNER BRACKETS — spring-scaled from corners */}
+      {bracketSpring > 0.12 && (
         <>
-          {/* Top-left */}
-          <div style={{
-            position: 'absolute', top: -42, left: '6%',
-            width: sz, height: sz, opacity: bracketOp,
-            borderTop: `${bw}px solid ${col}`, borderLeft: `${bw}px solid ${col}`,
-            transform: `scale(${bracketScale * bracketBreath})`,
-            transformOrigin: 'top left',
-          }} />
-          {/* Top-right */}
-          <div style={{
-            position: 'absolute', top: -42, right: '6%',
-            width: sz, height: sz, opacity: bracketOp,
-            borderTop: `${bw}px solid ${col}`, borderRight: `${bw}px solid ${col}`,
-            transform: `scale(${bracketScale * bracketBreath})`,
-            transformOrigin: 'top right',
-          }} />
-          {/* Bottom-left */}
-          <div style={{
-            position: 'absolute', bottom: -42, left: '6%',
-            width: sz, height: sz, opacity: bracketOp,
-            borderBottom: `${bw}px solid ${col}`, borderLeft: `${bw}px solid ${col}`,
-            transform: `scale(${bracketScale * bracketBreath})`,
-            transformOrigin: 'bottom left',
-          }} />
-          {/* Bottom-right */}
-          <div style={{
-            position: 'absolute', bottom: -42, right: '6%',
-            width: sz, height: sz, opacity: bracketOp,
-            borderBottom: `${bw}px solid ${col}`, borderRight: `${bw}px solid ${col}`,
-            transform: `scale(${bracketScale * bracketBreath})`,
-            transformOrigin: 'bottom right',
-          }} />
+          <div style={{ position: 'absolute', top: -40, left: bracketInset, width: sz, height: sz, opacity: bracketOp, borderTop: `${bw}px solid ${col}`, borderLeft: `${bw}px solid ${col}`, transform: `scale(${bracketScale * bracketBreath})`, transformOrigin: 'top left' }} />
+          <div style={{ position: 'absolute', top: -40, right: bracketInset, width: sz, height: sz, opacity: bracketOp, borderTop: `${bw}px solid ${col}`, borderRight: `${bw}px solid ${col}`, transform: `scale(${bracketScale * bracketBreath})`, transformOrigin: 'top right' }} />
+          <div style={{ position: 'absolute', bottom: -40, left: bracketInset, width: sz, height: sz, opacity: bracketOp, borderBottom: `${bw}px solid ${col}`, borderLeft: `${bw}px solid ${col}`, transform: `scale(${bracketScale * bracketBreath})`, transformOrigin: 'bottom left' }} />
+          <div style={{ position: 'absolute', bottom: -40, right: bracketInset, width: sz, height: sz, opacity: bracketOp, borderBottom: `${bw}px solid ${col}`, borderRight: `${bw}px solid ${col}`, transform: `scale(${bracketScale * bracketBreath})`, transformOrigin: 'bottom right' }} />
         </>
       )}
     </>
@@ -165,42 +151,48 @@ const FluidFrame = ({ entranceSpring, isIlluminated, frame }) => {
 };
 
 /* ═══════════════════════════════════════════════
-   ANIMATED WORD
+   WORD-LEVEL ANIMATED WORD
    
-   Entrance: Glow Reveal (scale 0.94→1.0)
-   Active: brightness filter + drop-shadow blur (NOT just color)
-   Past: smoothly dims
+   Each word independently tracked by start/end timestamps.
+   Active: gold + brightness filter + drop-shadow glow
+   Inactive: muted grey/white
    ═══════════════════════════════════════════════ */
 const AnimatedWord = ({ word, isActive, isPast, entranceFrame, fps, staggerIdx }) => {
   const frame = useCurrentFrame();
   const staggered = entranceFrame + staggerIdx * theme.timing.wordStagger;
   const localFrame = Math.max(0, frame - staggered);
 
-  // Glow Reveal entrance
-  const revealProg = interpolate(localFrame, [0, theme.timing.revealFrames], [0, 1], {
+  // ── KINETIC ENTRY over 15 frames ──
+  // Y: +20px → 0
+  // Scale: 0.95 → 1.0
+  // Opacity: 0 → 1
+  const entryFrames = 15;
+  const entryProg = interpolate(localFrame, [0, entryFrames], [0, 1], {
     extrapolateLeft: 'clamp', extrapolateRight: 'clamp',
     easing: EASE_GLOW_REVEAL,
   });
 
-  const scale = interpolate(revealProg, [0, 1], [theme.caption.scaleFrom, theme.caption.scaleTo]);
-  const opacity = interpolate(revealProg, [0, 0.3, 1], [0, 0.5, 1]);
-  const translateY = interpolate(revealProg, [0, 1], [10, 0]);
+  const scale = interpolate(entryProg, [0, 1], [0.95, 1.0]);
+  const opacity = interpolate(entryProg, [0, 0.3, 1], [0, 0.5, 1]);
+  const translateY = interpolate(entryProg, [0, 1], [20, 0]);
 
-  // Active word: gentle breathing scale
+  // Active breathing scale
   let scaleMult = 1;
   if (isActive) {
     scaleMult = interpolate(Math.sin(frame * 0.08), [-1, 1], [1.0, theme.caption.highlightScale]);
   }
 
-  // ── GLOW FILTER on active word (not just hex color) ──
-  // Active: brightness boost + gold drop-shadow
+  // ── ACTIVE WORD: brightness filter + gold drop-shadow glow ──
   let filterVal = 'none';
   if (isActive) {
-    const glowIntensity = interpolate(Math.sin(frame * 0.08), [-1, 1], [0.7, 1.0]);
-    filterVal = `brightness(1.35) drop-shadow(0 0 ${theme.caption.glowRadius * glowIntensity}px ${theme.gold.glowStrong})`;
+    const glowPulse = interpolate(Math.sin(frame * 0.08), [-1, 1], [0.7, 1.0]);
+    filterVal = `brightness(1.35) drop-shadow(0 0 ${theme.caption.glowRadius * glowPulse}px ${theme.gold.glowStrong})`;
   }
 
-  // Color states
+  // ── COLOR: smooth word-level highlighting ──
+  // Active: champagne gold with text-shadow glow
+  // Inactive past: muted slightly transparent white
+  // Inactive future: barely visible grey
   let color, shadow, weight;
   if (isActive) {
     color = theme.text.active;
@@ -238,7 +230,6 @@ const AnimatedWord = ({ word, isActive, isPast, entranceFrame, fps, staggerIdx }
       }}
     >
       {word.word}
-      {/* Gold underline on active word */}
       {isActive && (
         <div style={{
           position: 'absolute', bottom: -2,
@@ -253,14 +244,12 @@ const AnimatedWord = ({ word, isActive, isPast, entranceFrame, fps, staggerIdx }
 };
 
 /* ═══════════════════════════════════════════════
-   CAPTION LINE — with OVERLAPPING TRANSITIONS
+   CAPTION LINE — overlapping kinetic transitions
    
-   • Entrance: 9 frames before line start — overlap with previous exit
-   • Exit: begins at line end, 9 frames (0.3s at 30fps)
-   • Outgoing: drifts UP 12px + fades out
-   • Incoming: scales 0.95→1.0 + fades in
-   • 5-frame overlap window with adjacent lines
-   • Spring drives the FluidFrame brackets
+   Enter: Y +20→0, scale 0.95→1.0, opacity 0→1, over 15 frames
+   Exit:  Y 0→-20, scale 1.0→0.97, opacity 1→0, blur 0→1.5px
+   Overlap: 5-frame window between phrases
+   Brackets: spring({ damping: 14, stiffness: 120 })
    ═══════════════════════════════════════════════ */
 const CaptionLine = ({ line, lineIndex, fps, introFrames }) => {
   const frame = useCurrentFrame();
@@ -270,20 +259,18 @@ const CaptionLine = ({ line, lineIndex, fps, introFrames }) => {
   const lineStartFrame = introFrames + Math.floor((line.start + offset) * fps);
   const lineEndFrame = introFrames + Math.floor((line.end + offset) * fps);
 
-  // ── OVERLAPPING ENTRANCE ──
-  // Start fading in 9 frames before the line should be visible
-  // This overlaps with the previous line's exit by ~5 frames
-  const overlapFrames = 9; // 0.3s at 30fps
+  const targetWidth = estimateLineWidth(line.words);
+
+  // ── OVERLAPPING ENTRANCE (9 frames) ──
+  const overlapFrames = 9;
   const entranceStart = lineStartFrame - overlapFrames;
-  const entranceEnd = lineStartFrame + 5;
+  const entranceEnd = lineStartFrame + 6;
   const entranceProg = interpolate(frame, [entranceStart, entranceEnd], [0, 1], {
     extrapolateLeft: 'clamp', extrapolateRight: 'clamp',
     easing: EASE_GLOW_REVEAL,
   });
 
-  // ── OVERLAPPING EXIT ──
-  // Start exiting a few frames after last word ends
-  // Exit takes 9 frames (0.3s) — overlaps with next line entrance
+  // ── OVERLAPPING EXIT (9 frames) ──
   const exitStart = lineEndFrame + 3;
   const exitEnd = exitStart + overlapFrames;
   const exitProg = interpolate(frame, [exitStart, exitEnd], [0, 1], {
@@ -291,34 +278,29 @@ const CaptionLine = ({ line, lineIndex, fps, introFrames }) => {
     easing: EASE_SILK_IN,
   });
 
-  // Combined opacity (entrance fades in, exit fades out)
   const lineOpacity = entranceProg * (1 - exitProg);
 
-  // ── ENTRANCE: scale 0.95 → 1.0 (from below) ──
-  const entranceScale = interpolate(entranceProg, [0, 1], [0.95, 1]);
-  const entranceY = interpolate(entranceProg, [0, 1], [14, 0]);
+  // ── KINETIC ENTRY: Y +20→0, scale 0.95→1.0 ──
+  const entranceScale = interpolate(entranceProg, [0, 1], [0.95, 1.0]);
+  const entranceY = interpolate(entranceProg, [0, 1], [20, 0]);
 
-  // ── EXIT: drift UP 12px + slight shrink ──
-  const exitDriftY = exitProg * -12;
+  // ── KINETIC EXIT: Y 0→-20, scale 1.0→0.97, blur ──
+  const exitDriftY = exitProg * -20;
   const exitScale = 1 - exitProg * 0.03;
-
-  // ── EXIT: blur dissolve ──
   const exitBlur = exitProg * 1.5;
 
   const totalY = entranceY + exitDriftY;
   const totalScale = entranceScale * exitScale;
 
-  // ── SPRING for FluidFrame brackets (smooth glide, not snap) ──
+  // ── SPRING-LOADED BRACKETS: damping 14, stiffness 120 ──
   const bracketSpring = spring({
     frame: Math.max(0, frame - entranceStart),
     fps,
-    config: { damping: 18, mass: 0.6, stiffness: 120 },
-    durationInFrames: 30,
+    config: { damping: 14, stiffness: 120, mass: 0.5 },
+    durationInFrames: 35,
   });
-  // Apply exit fade to bracket spring
   const bracketVal = bracketSpring * (1 - exitProg);
 
-  // Is any word currently illuminated?
   const isIlluminated = line.words.some(
     (w) => currentTime >= w.start && currentTime < w.end
   );
@@ -328,12 +310,8 @@ const CaptionLine = ({ line, lineIndex, fps, introFrames }) => {
   return (
     <div
       style={{
-        // ABSOLUTE position within the locked container
-        // This prevents baseline jitter
         position: 'absolute',
-        left: 0,
-        right: 0,
-        top: '50%',
+        left: 0, right: 0, top: '50%',
         transform: `translateY(calc(-50% + ${totalY}px)) scale(${totalScale})`,
         opacity: lineOpacity,
         textAlign: 'center',
@@ -344,14 +322,13 @@ const CaptionLine = ({ line, lineIndex, fps, introFrames }) => {
         willChange: 'transform, opacity, filter',
       }}
     >
-      {/* FluidFrame — driven by spring, not lineOpacity */}
-      <FluidFrame
-        entranceSpring={bracketVal}
+      <DynamicBrackets
+        bracketSpring={bracketVal}
+        targetWidth={targetWidth}
         isIlluminated={isIlluminated}
         frame={frame}
       />
 
-      {/* Words */}
       <div style={{ position: 'relative', zIndex: 1 }}>
         {line.words.map((word, wi) => {
           const wordStartFrame = introFrames + Math.floor((word.start + offset) * fps);
@@ -377,11 +354,8 @@ const CaptionLine = ({ line, lineIndex, fps, introFrames }) => {
 
 /* ═══════════════════════════════════════════════
    MAIN OVERLAY — LOCKED ANCHOR POINT
-   
    Fixed-height container at screen center.
-   Lines are positioned ABSOLUTE inside it.
-   The container NEVER moves — only content inside it.
-   This eliminates vertical jitter on line transitions.
+   Lines absolutely positioned inside — no vertical jitter.
    ═══════════════════════════════════════════════ */
 export const CaptionOverlay = ({ words = [], introFrames = 0 }) => {
   const frame = useCurrentFrame();
@@ -395,48 +369,33 @@ export const CaptionOverlay = ({ words = [], introFrames = 0 }) => {
   );
 
   const visibleLines = lines.filter((line) => {
-    const buf = (9 + 12) / fps; // overlap + exit frames
+    const buf = 22 / fps;
     return currentTime >= line.start - 0.5 && currentTime <= line.end + buf;
   });
 
   const hasVisible = visibleLines.length > 0;
 
   return (
-    <div
-      style={{
-        position: 'absolute',
-        inset: 0,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 10,
-        pointerEvents: 'none',
-      }}
-    >
-      {/* ── LOCKED ANCHOR CONTAINER ──
-          Fixed height. Never moves. Lines absolute inside.
-          This is the anchor point — all text motion is relative to this. */}
-      <div
-        style={{
-          position: 'relative',
-          width: '100%',
-          height: 160, // Fixed height — prevents vertical jitter
-          maxWidth: theme.caption.maxWidth,
-        }}
-      >
-        {/* Soft radial backdrop */}
+    <div style={{
+      position: 'absolute', inset: 0,
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      zIndex: 10, pointerEvents: 'none',
+    }}>
+      <div style={{
+        position: 'relative',
+        width: '100%',
+        height: 160,
+        maxWidth: theme.caption.maxWidth,
+      }}>
         {hasVisible && (
           <div style={{
             position: 'absolute',
             top: -50, bottom: -50, left: -60, right: -60,
             background: 'radial-gradient(ellipse 100% 100% at 50% 50%, rgba(0,0,0,0.25) 0%, rgba(0,0,0,0.08) 55%, transparent 100%)',
-            borderRadius: 60,
-            filter: 'blur(40px)',
-            zIndex: -1,
+            borderRadius: 60, filter: 'blur(40px)', zIndex: -1,
           }} />
         )}
 
-        {/* Lines — absolutely positioned at center of locked container */}
         {visibleLines.map((line, i) => (
           <CaptionLine
             key={`line-${line.start}-${line.end}`}

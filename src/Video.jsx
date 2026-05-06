@@ -1,8 +1,6 @@
 /**
  * EOTC Voice Studio — Main Video Composition
  * 
- * The master composition that layers all visual elements:
- * 
  * Layer Stack (bottom → top):
  * ─────────────────────────────
  * 1. AnimatedBackground   — cinematic gradient with drifting orbs
@@ -14,10 +12,10 @@
  * 7. IntroSequence        — cinematic opening (overlays everything)
  * 8. OutroSequence        — branded closing card
  * 
- * Props (passed from render-entry.js):
- * @prop {Array} words           - [{word, start, end}, ...] from Whisper
- * @prop {string} audioFileName  - filename in public/ dir (e.g. "audio.m4a")
- * @prop {string} title          - intro title text
+ * Font Loading:
+ * Uses @remotion/google-fonts for bulletproof Amharic rendering.
+ * Noto Sans Ethiopic is loaded with proper character shaping
+ * so glyphs like ፒኬ render correctly during frame-by-frame capture.
  */
 import React, { useEffect, useState } from 'react';
 import {
@@ -29,6 +27,7 @@ import {
   delayRender,
   Sequence,
 } from 'remotion';
+import { loadFont as loadEthiopic } from '@remotion/google-fonts/NotoSansEthiopic';
 import { AnimatedBackground } from './components/AnimatedBackground.jsx';
 import { ParticleField } from './components/ParticleField.jsx';
 import { LightRays } from './components/LightRays.jsx';
@@ -38,11 +37,15 @@ import { IntroSequence } from './components/IntroSequence.jsx';
 import { OutroSequence } from './components/OutroSequence.jsx';
 import { theme } from './utils/theme.js';
 
-// Google Fonts CSS URLs
-const FONT_URLS = [
-  'https://fonts.googleapis.com/css2?family=Noto+Sans+Ethiopic:wght@400;500;600;700;800&display=swap',
-  'https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap',
-];
+// ── Load Amharic font via @remotion/google-fonts ──
+// This ensures proper character shaping during headless rendering
+const { fontFamily: ethiopicFont } = loadEthiopic('normal', {
+  weights: ['400', '500', '600', '700', '800'],
+  subsets: ['ethiopic', 'latin'],
+});
+
+// Inter for display text
+const INTER_URL = 'https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap';
 
 export const EOTCVideo = ({
   words = [],
@@ -52,23 +55,21 @@ export const EOTCVideo = ({
   const { fps, durationInFrames } = useVideoConfig();
 
   // ── Font Loading ──
-  // delayRender prevents frame capture until fonts are loaded
-  const [fontsHandle] = useState(() => delayRender('Loading EOTC fonts...'));
+  // delayRender blocks frame capture until Inter is loaded
+  // (Ethiopic is already loaded via @remotion/google-fonts above)
+  const [fontsHandle] = useState(() => delayRender('Loading display font...'));
 
   useEffect(() => {
     const loadFonts = async () => {
       try {
-        const promises = FONT_URLS.map((url) => {
-          return new Promise((resolve) => {
-            const link = document.createElement('link');
-            link.rel = 'stylesheet';
-            link.href = url;
-            link.onload = resolve;
-            link.onerror = resolve; // Don't block render on font failure
-            document.head.appendChild(link);
-          });
+        const link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.href = INTER_URL;
+        await new Promise((resolve) => {
+          link.onload = resolve;
+          link.onerror = resolve;
+          document.head.appendChild(link);
         });
-        await Promise.all(promises);
         await document.fonts.ready;
       } catch (e) {
         console.warn('Font loading issue (non-critical):', e);
@@ -78,12 +79,11 @@ export const EOTCVideo = ({
     loadFonts();
   }, [fontsHandle]);
 
-  // ── Timing Calculations ──
+  // ── Timing ──
   const introFrames = theme.timing.introDuration;
   const outroFrames = theme.timing.outroDuration;
   const outroStartFrame = durationInFrames - outroFrames;
 
-  // Resolve audio source via Remotion's staticFile
   const audioSrc = audioFileName ? staticFile(audioFileName) : null;
 
   return (
@@ -94,6 +94,7 @@ export const EOTCVideo = ({
         position: 'relative',
         overflow: 'hidden',
         backgroundColor: theme.bg.deep,
+        fontFamily: ethiopicFont,
       }}
     >
       {/* ── Layer 1: Animated Background ── */}
@@ -109,7 +110,6 @@ export const EOTCVideo = ({
       <ParticleField />
 
       {/* ── Layer 5: Audio Track ── */}
-      {/* Audio starts after intro sequence */}
       {audioSrc && (
         <Sequence from={introFrames}>
           <Audio src={audioSrc} />
@@ -124,7 +124,7 @@ export const EOTCVideo = ({
         />
       )}
 
-      {/* ── Layer 7: Intro Sequence (overlays everything) ── */}
+      {/* ── Layer 7: Intro Sequence ── */}
       <IntroSequence title={title} />
 
       {/* ── Layer 8: Outro Sequence ── */}
