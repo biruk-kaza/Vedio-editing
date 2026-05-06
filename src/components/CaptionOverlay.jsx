@@ -10,6 +10,7 @@
  * 2. KINETIC ENTRY (15 frames)
  *    - Y-axis: +20px → 0px
  *    - Scale: 0.95 → 1.0
+ *    - SkewY: 5deg → 0deg (pops out of background)
  *    - Opacity: 0 → 1
  *    - Easing: bezier(0.16, 1, 0.3, 1) — exponential ease-out
  * 
@@ -165,6 +166,7 @@ const AnimatedWord = ({ word, isActive, isPast, entranceFrame, fps, staggerIdx }
   // ── KINETIC ENTRY over 15 frames ──
   // Y: +20px → 0
   // Scale: 0.95 → 1.0
+  // SkewY: 5deg → 0deg
   // Opacity: 0 → 1
   const entryFrames = 15;
   const entryProg = interpolate(localFrame, [0, entryFrames], [0, 1], {
@@ -175,6 +177,7 @@ const AnimatedWord = ({ word, isActive, isPast, entranceFrame, fps, staggerIdx }
   const scale = interpolate(entryProg, [0, 1], [0.95, 1.0]);
   const opacity = interpolate(entryProg, [0, 0.3, 1], [0, 0.5, 1]);
   const translateY = interpolate(entryProg, [0, 1], [20, 0]);
+  const skewY = interpolate(entryProg, [0, 1], [5, 0]);
 
   // Active breathing scale
   let scaleMult = 1;
@@ -218,7 +221,7 @@ const AnimatedWord = ({ word, isActive, isPast, entranceFrame, fps, staggerIdx }
         fontFamily: theme.fonts.caption,
         fontWeight: weight,
         opacity,
-        transform: `translateY(${translateY}px) scale(${scale * scaleMult})`,
+        transform: `translateY(${translateY}px) scale(${scale * scaleMult}) skewY(${skewY}deg)`,
         textShadow: shadow,
         filter: filterVal,
         WebkitTextStroke: `${theme.caption.stroke.width}px ${theme.caption.stroke.color}`,
@@ -246,7 +249,7 @@ const AnimatedWord = ({ word, isActive, isPast, entranceFrame, fps, staggerIdx }
 /* ═══════════════════════════════════════════════
    CAPTION LINE — overlapping kinetic transitions
    
-   Enter: Y +20→0, scale 0.95→1.0, opacity 0→1, over 15 frames
+   Enter: Y +20→0, scale 0.95→1.0, skewY 5→0, opacity 0→1, over 15 frames
    Exit:  Y 0→-20, scale 1.0→0.97, opacity 1→0, blur 0→1.5px
    Overlap: 5-frame window between phrases
    Brackets: spring({ damping: 14, stiffness: 120 })
@@ -280,9 +283,10 @@ const CaptionLine = ({ line, lineIndex, fps, introFrames }) => {
 
   const lineOpacity = entranceProg * (1 - exitProg);
 
-  // ── KINETIC ENTRY: Y +20→0, scale 0.95→1.0 ──
+  // ── KINETIC ENTRY: Y +20→0, scale 0.95→1.0, skewY 5→0 ──
   const entranceScale = interpolate(entranceProg, [0, 1], [0.95, 1.0]);
   const entranceY = interpolate(entranceProg, [0, 1], [20, 0]);
+  const entranceSkewY = interpolate(entranceProg, [0, 1], [5, 0]);
 
   // ── KINETIC EXIT: Y 0→-20, scale 1.0→0.97, blur ──
   const exitDriftY = exitProg * -20;
@@ -312,7 +316,7 @@ const CaptionLine = ({ line, lineIndex, fps, introFrames }) => {
       style={{
         position: 'absolute',
         left: 0, right: 0, top: '50%',
-        transform: `translateY(calc(-50% + ${totalY}px)) scale(${totalScale})`,
+        transform: `translateY(calc(-50% + ${totalY}px)) scale(${totalScale}) skewY(${entranceSkewY}deg)`,
         opacity: lineOpacity,
         textAlign: 'center',
         maxWidth: theme.caption.maxWidth,
