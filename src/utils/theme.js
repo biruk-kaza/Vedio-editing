@@ -1,63 +1,64 @@
 /**
- * EOTC Voice Studio — Design Tokens
+ * EOTC Voice Studio — Premium Design Tokens
  * 
- * World-class cinematic theme inspired by Ethiopian Orthodox iconography.
- * Deep sacred colors, gold accents, ethereal light effects.
+ * Ultra-cinematic theme system with refined color science,
+ * smooth animation curves, and professional typography.
  */
 
 export const theme = {
-  // ── Background Palette ──
+  // ── Background Palette — Deep cinematic tones ──
   bg: {
-    deep: '#080810',
-    gradient1: '#140a24',    // Deep royal purple
-    gradient2: '#0a1628',    // Sacred navy
-    gradient3: '#1a0e0e',    // Dark burgundy warmth
+    deep: '#050508',
+    gradient1: '#0f0720',        // Rich indigo
+    gradient2: '#081020',        // Deep ocean blue
+    gradient3: '#120810',        // Warm dark wine
+    gradient4: '#0a0818',        // Midnight purple
   },
 
-  // ── Gold Accent System ──
+  // ── Gold Accent System — Refined metallics ──
   gold: {
     primary: '#d4a574',
-    bright: '#f0c987',
+    bright: '#f5d4a0',
     warm: '#c4915e',
-    glow: 'rgba(212, 165, 116, 0.35)',
-    glowStrong: 'rgba(240, 201, 135, 0.5)',
-    subtle: 'rgba(212, 165, 116, 0.12)',
+    hotGlow: '#ffd78a',
+    glow: 'rgba(245, 212, 160, 0.40)',
+    glowStrong: 'rgba(245, 212, 160, 0.65)',
+    subtle: 'rgba(212, 165, 116, 0.10)',
   },
 
   // ── Text Colors ──
   text: {
-    primary: '#f5f0eb',
-    secondary: 'rgba(245, 240, 235, 0.55)',
-    dimmed: 'rgba(245, 240, 235, 0.25)',
+    primary: '#f8f4ef',
+    secondary: 'rgba(248, 244, 239, 0.50)',
+    dimmed: 'rgba(248, 244, 239, 0.22)',
     highlighted: '#ffffff',
   },
 
   // ── Particle / FX Colors ──
   fx: {
-    particle: 'rgba(212, 165, 116, 0.6)',
-    particleBright: 'rgba(240, 201, 135, 0.8)',
-    ray: 'rgba(212, 165, 116, 0.03)',
-    rayBright: 'rgba(240, 201, 135, 0.06)',
-    cross: 'rgba(212, 165, 116, 0.06)',
+    particle: 'rgba(212, 165, 116, 0.55)',
+    particleBright: 'rgba(245, 212, 160, 0.85)',
+    particleWhite: 'rgba(255, 255, 255, 0.4)',
+    ray: 'rgba(212, 165, 116, 0.025)',
+    rayBright: 'rgba(240, 201, 135, 0.05)',
+    cross: 'rgba(212, 165, 116, 0.05)',
   },
 
   // ── Typography ──
   fonts: {
-    // Primary font for Amharic text — Noto Sans Ethiopic has excellent Ge'ez support
     caption: "'Noto Sans Ethiopic', 'Noto Sans', sans-serif",
-    // Display font for titles / Latin text
     display: "'Inter', 'Noto Sans', sans-serif",
   },
 
-  // ── Spacing & Sizing ──
+  // ── Caption Styling ──
   caption: {
-    fontSize: 52,
-    lineHeight: 1.55,
-    maxWidth: 880,
-    bottomOffset: 340,     // Distance from bottom of frame
-    wordGap: 14,
-    highlightScale: 1.08,
-    glowRadius: 24,
+    fontSize: 48,
+    lineHeight: 1.6,
+    maxWidth: 900,
+    bottomOffset: 360,
+    wordGap: 12,
+    highlightScale: 1.06,
+    glowRadius: 20,
   },
 
   // ── Video Dimensions (9:16 TikTok/Reels) ──
@@ -67,14 +68,16 @@ export const theme = {
     fps: 30,
   },
 
-  // ── Animation Timings ──
+  // ── Animation Timings — Buttery smooth ──
   timing: {
-    introFadeDuration: 45,     // frames (1.5s at 30fps)
+    introFadeDuration: 45,
     outroFadeDuration: 45,
-    introDuration: 90,         // 3s intro
-    outroDuration: 90,         // 3s outro
-    captionFadeIn: 8,          // frames
-    captionFadeOut: 12,
-    wordSpring: { damping: 14, mass: 0.8, stiffness: 180 },
+    introDuration: 90,
+    outroDuration: 90,
+    captionFadeIn: 10,
+    captionFadeOut: 15,
+    wordSpring: { damping: 16, mass: 0.6, stiffness: 160 },
+    // Caption timing offset — shift earlier to fix late sync
+    captionOffsetSec: -0.15,
   },
 };

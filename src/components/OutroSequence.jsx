@@ -1,10 +1,11 @@
 /**
- * EOTC Voice Studio — Outro Sequence
+ * EOTC Voice Studio — Premium Outro Sequence
  * 
- * Branded closing card with:
- * - Fade-in from content
- * - Cross + branding
- * - Fade to black
+ * Cinematic closing card with:
+ * - Smooth fade from content
+ * - Spring-animated cross + branding
+ * - Pulsing gold glow
+ * - Clean fade to black
  */
 import React from 'react';
 import {
@@ -18,7 +19,7 @@ import { theme } from '../utils/theme.js';
 
 export const OutroSequence = ({ outroStartFrame }) => {
   const frame = useCurrentFrame();
-  const { fps, durationInFrames } = useVideoConfig();
+  const { fps } = useVideoConfig();
 
   const relativeFrame = frame - outroStartFrame;
   const outroDuration = theme.timing.outroDuration;
@@ -26,29 +27,38 @@ export const OutroSequence = ({ outroStartFrame }) => {
   // Only render during outro
   if (relativeFrame < -5 || relativeFrame > outroDuration + 10) return null;
 
-  // Fade in
-  const fadeIn = interpolate(relativeFrame, [0, 20], [0, 1], {
+  // Smooth cubic fade in
+  const fadeIn = interpolate(relativeFrame, [0, 25], [0, 1], {
     extrapolateLeft: 'clamp',
     extrapolateRight: 'clamp',
+    easing: Easing.out(Easing.cubic),
   });
 
-  // Content entrance
+  // Content entrance spring
   const contentSpring = spring({
     frame: Math.max(0, relativeFrame),
     fps,
-    config: { damping: 18, mass: 1, stiffness: 120 },
-    durationInFrames: 30,
+    config: { damping: 16, mass: 0.8, stiffness: 100 },
+    durationInFrames: 35,
   });
 
   // Fade to black at the very end
   const fadeToBlack = interpolate(
     relativeFrame,
-    [outroDuration - 20, outroDuration],
+    [outroDuration - 25, outroDuration],
     [0, 1],
-    { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }
+    { extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.in(Easing.cubic) }
   );
 
-  const contentY = interpolate(contentSpring, [0, 1], [40, 0]);
+  const contentY = interpolate(contentSpring, [0, 1], [35, 0]);
+  const contentScale = interpolate(contentSpring, [0, 1], [0.95, 1]);
+
+  // Subtle gold pulse on cross
+  const crossGlow = interpolate(
+    Math.sin(relativeFrame * 0.06),
+    [-1, 1],
+    [0.5, 1.0]
+  );
 
   return (
     <div
@@ -67,7 +77,7 @@ export const OutroSequence = ({ outroStartFrame }) => {
         style={{
           position: 'absolute',
           inset: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.6)',
+          backgroundColor: 'rgba(5, 5, 8, 0.7)',
           opacity: fadeIn,
         }}
       />
@@ -78,17 +88,20 @@ export const OutroSequence = ({ outroStartFrame }) => {
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          gap: 20,
+          gap: 24,
           opacity: fadeIn,
-          transform: `translateY(${contentY}px)`,
+          transform: `translateY(${contentY}px) scale(${contentScale})`,
           zIndex: 1,
         }}
       >
-        {/* Small cross */}
+        {/* Cross with glow */}
         <svg
           viewBox="0 0 200 280"
-          width={80}
-          height={112}
+          width={75}
+          height={105}
+          style={{
+            filter: `drop-shadow(0 0 ${12 * crossGlow}px ${theme.gold.glow})`,
+          }}
         >
           <g fill={theme.gold.primary}>
             <rect x="88" y="20" width="24" height="240" rx="3" />
@@ -103,7 +116,7 @@ export const OutroSequence = ({ outroStartFrame }) => {
         {/* Divider */}
         <div
           style={{
-            width: 180,
+            width: interpolate(contentSpring, [0, 1], [0, 200]),
             height: 1,
             background: `linear-gradient(90deg, transparent, ${theme.gold.primary}, transparent)`,
           }}
@@ -112,24 +125,26 @@ export const OutroSequence = ({ outroStartFrame }) => {
         {/* Brand text */}
         <div
           style={{
-            fontSize: 28,
+            fontSize: 26,
             fontFamily: theme.fonts.display,
             fontWeight: 300,
             color: theme.text.primary,
-            letterSpacing: 6,
+            letterSpacing: 7,
             textTransform: 'uppercase',
+            textShadow: `0 0 20px ${theme.gold.subtle}`,
           }}
         >
-          EOTC Voice Studio
+          EOTC VOICE STUDIO
         </div>
 
         {/* Amharic tag */}
         <div
           style={{
-            fontSize: 20,
+            fontSize: 19,
             fontFamily: theme.fonts.caption,
             color: theme.gold.warm,
-            opacity: 0.8,
+            opacity: 0.75,
+            letterSpacing: 1,
           }}
         >
           ክብር ለእግዚአብሔር

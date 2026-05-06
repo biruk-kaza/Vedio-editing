@@ -1,8 +1,11 @@
 /**
  * EOTC Voice Studio — Cross Watermark
  * 
- * Subtle Ethiopian Orthodox cross rendered as a translucent watermark.
- * Slowly rotates and pulses for a living, sacred feel.
+ * Ultra-subtle Ethiopian Orthodox cross rendered as a translucent watermark.
+ * Barely visible — just enough to brand the frame.
+ * - Very slow rotation
+ * - Gentle breathing pulse
+ * - Smooth scale oscillation
  */
 import React from 'react';
 import { useCurrentFrame, interpolate } from 'remotion';
@@ -11,21 +14,21 @@ import { theme } from '../utils/theme.js';
 export const CrossWatermark = () => {
   const frame = useCurrentFrame();
 
-  // Very slow rotation
-  const rotation = frame * 0.02;
+  // Ultra-slow rotation
+  const rotation = frame * 0.015;
 
-  // Gentle pulse
+  // Gentle breathing opacity
   const opacity = interpolate(
-    Math.sin(frame * 0.012),
+    Math.sin(frame * 0.008),
     [-1, 1],
-    [0.04, 0.08]
+    [0.03, 0.065]
   );
 
-  // Scale breath
+  // Subtle scale breathing
   const scale = interpolate(
-    Math.sin(frame * 0.01),
+    Math.sin(frame * 0.006),
     [-1, 1],
-    [0.98, 1.02]
+    [0.97, 1.03]
   );
 
   return (
@@ -41,12 +44,13 @@ export const CrossWatermark = () => {
     >
       <svg
         viewBox="0 0 200 280"
-        width={320}
-        height={448}
+        width={300}
+        height={420}
         style={{
           opacity,
           transform: `rotate(${rotation}deg) scale(${scale})`,
-          marginTop: '-15%',
+          marginTop: '-12%',
+          filter: `blur(1px)`,
         }}
       >
         {/* Ethiopian Orthodox Cross — simplified geometric form */}
@@ -65,11 +69,7 @@ export const CrossWatermark = () => {
           <circle cx="100" cy="260" r="10" />
           {/* Center diamond */}
           <rect
-            x="86"
-            y="66"
-            width="28"
-            height="28"
-            rx="4"
+            x="86" y="66" width="28" height="28" rx="4"
             transform="rotate(45 100 80)"
           />
           {/* Inner cross detail */}
