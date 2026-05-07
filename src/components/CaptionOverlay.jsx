@@ -1,20 +1,23 @@
 /**
- * EOTC Voice Studio — Cinema-Grade Kinetic Typography
+ * EOTC Voice Studio — World-Class Kinetic Typography Engine
  * 
- * ═══ ICON-TEXT COMPOSITION ═══
- * Icon and text form a SINGLE UNIT. Text shifts based
- * on where the icon lives. Five compositions:
+ * ═══ DESIGN PHILOSOPHY ═══
  * 
- * 1. ICON_ABOVE  — icon centered above, text below
- * 2. ICON_LEFT   — icon on left, text shifts right
- * 3. ICON_RIGHT  — icon on right, text shifts left
- * 4. ICON_INLINE — icon inline with text (same row)
- * 5. ICON_BEHIND — large icon behind, text over it
+ * 1. PERFECT CENTER — All text lives in flexbox-centered
+ *    container at exact screen center. Never drifts.
  * 
- * All stay in center comfort zone (38-52% vertical)
+ * 2. Z-AXIS DEPTH — Text enters from Z-depth (scale 0.7)
+ *    and pushes forward to 1.0 with perspective. Creates
+ *    a cinematic "emerging from depth" feel.
  * 
- * ═══ SMOOTH WORD HIGHLIGHTING ═══
- * activeProgress (0→1→0) over 4-frame ramp
+ * 3. CLEAN ICONS — Minimal, elegant liturgical icons that
+ *    complement the text without competing.
+ * 
+ * 4. SMOOTH TRANSITIONS — 8-frame highlight ramp, spring
+ *    entry, bezier exit. Zero jitter.
+ * 
+ * 5. VARIETY WITHOUT CHAOS — 5 layouts that all stay
+ *    perfectly centered. Variety is in icon position only.
  */
 import React, { useMemo } from 'react';
 import {
@@ -29,82 +32,18 @@ import {
 import { theme } from '../utils/theme.js';
 import { GlowIcon, IconLightCast, getIconForLine } from './IconLibrary.jsx';
 
+const HIGHLIGHT_RAMP = 8;
 const EASE_EXIT = Easing.bezier(0.4, 0, 0.2, 1);
-const HIGHLIGHT_RAMP = 6;
 
-// ═══ ICON-TEXT COMPOSITIONS ═══
-// Each defines how the icon and text relate spatially
+// ═══ COMPOSITIONS — All perfectly centered ═══
+// Icon position varies, text ALWAYS at dead center
 const COMPOSITIONS = [
-  {
-    name: 'ICON_ABOVE',
-    // Overall position
-    anchor: { top: '42%', left: '50%', transform: 'translate(-50%, -50%)' },
-    // Icon placement relative to text
-    iconPlacement: 'above',
-    iconSize: 80,
-    textAlign: 'center',
-    textShift: { x: 0, y: 0 },
-    sizeMultiplier: 1.25,
-    slideFrom: { x: 0, y: 45 },
-    slideExit: { x: 0, y: -22 },
-    lightCast: { x: '50%', y: '35%' },
-  },
-  {
-    name: 'ICON_LEFT',
-    anchor: { top: '44%', left: '48%', transform: 'translate(-50%, -50%)' },
-    iconPlacement: 'left',
-    iconSize: 70,
-    textAlign: 'left',
-    textShift: { x: 40, y: 0 },   // text shifts right to make room
-    sizeMultiplier: 1.0,
-    slideFrom: { x: -55, y: 8 },
-    slideExit: { x: -30, y: -8 },
-    lightCast: { x: '35%', y: '38%' },
-  },
-  {
-    name: 'ICON_RIGHT',
-    anchor: { top: '46%', left: '52%', transform: 'translate(-50%, -50%)' },
-    iconPlacement: 'right',
-    iconSize: 70,
-    textAlign: 'right',
-    textShift: { x: -40, y: 0 },   // text shifts left
-    sizeMultiplier: 1.0,
-    slideFrom: { x: 55, y: 8 },
-    slideExit: { x: 30, y: -8 },
-    lightCast: { x: '65%', y: '40%' },
-  },
-  {
-    name: 'ICON_INLINE',
-    anchor: { top: '43%', left: '50%', transform: 'translate(-50%, -50%)' },
-    iconPlacement: 'inline',
-    iconSize: 50,
-    textAlign: 'center',
-    textShift: { x: 0, y: 0 },
-    sizeMultiplier: 1.1,
-    slideFrom: { x: 0, y: -38 },
-    slideExit: { x: 0, y: -20 },
-    lightCast: { x: '50%', y: '36%' },
-  },
-  {
-    name: 'ICON_BEHIND',
-    anchor: { top: '45%', left: '50%', transform: 'translate(-50%, -50%)' },
-    iconPlacement: 'behind',
-    iconSize: 140,
-    textAlign: 'center',
-    textShift: { x: 0, y: 0 },
-    sizeMultiplier: 1.3,
-    slideFrom: { x: 0, y: 50 },
-    slideExit: { x: 0, y: 25 },
-    lightCast: { x: '50%', y: '40%' },
-  },
+  { name: 'ICON_ABOVE', iconPos: 'above', iconSize: 70 },
+  { name: 'ICON_LEFT',  iconPos: 'left',  iconSize: 60 },
+  { name: 'ICON_RIGHT', iconPos: 'right', iconSize: 60 },
+  { name: 'ICON_BELOW', iconPos: 'below', iconSize: 65 },
+  { name: 'ICON_BG',    iconPos: 'behind', iconSize: 130 },
 ];
-
-function getDynamicFontSize(wordCount, multiplier) {
-  const base = theme.caption.fontSize;
-  if (wordCount === 1) return Math.round(base * 1.5 * multiplier);
-  if (wordCount === 2) return Math.round(base * 1.2 * multiplier);
-  return Math.round(base * multiplier);
-}
 
 function groupWordsIntoLines(words, max) {
   const lines = [];
@@ -112,20 +51,28 @@ function groupWordsIntoLines(words, max) {
   for (const w of words) {
     cur.push(w);
     if (cur.length >= max) {
-      lines.push({ words: [...cur], start: cur[0].start, end: cur[cur.length - 1].end });
+      lines.push({
+        words: [...cur],
+        start: cur[0].start,
+        end: cur[cur.length - 1].end,
+      });
       cur = [];
     }
   }
   if (cur.length) {
-    lines.push({ words: [...cur], start: cur[0].start, end: cur[cur.length - 1].end });
+    lines.push({
+      words: [...cur],
+      start: cur[0].start,
+      end: cur[cur.length - 1].end,
+    });
   }
   return lines;
 }
 
 /* ═══════════════════════════════════════════════
-   SMOOTH WORD — Liquid highlight flow
+   CLEAN WORD — Crisp, glitch-free highlighting
    ═══════════════════════════════════════════════ */
-const SmoothWord = ({ word, absoluteTimeSec, fps, fontSize, isEmphasis }) => {
+const SmoothWord = ({ word, absoluteTimeSec, fps, fontSize }) => {
   const rampSec = HIGHLIGHT_RAMP / fps;
 
   const rampIn = interpolate(
@@ -136,128 +83,116 @@ const SmoothWord = ({ word, absoluteTimeSec, fps, fontSize, isEmphasis }) => {
     absoluteTimeSec, [word.end, word.end + rampSec], [1, 0],
     { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }
   );
-
-  const activeProgress = Math.min(rampIn, rampOut);
+  const progress = Math.min(rampIn, rampOut);
   const isPast = absoluteTimeSec > word.end + rampSec;
-  const isFuture = absoluteTimeSec < word.start - rampSec;
 
-  const r = interpolate(activeProgress, [0, 1], [isPast ? 190 : isFuture ? 130 : 160, 255]);
-  const g = interpolate(activeProgress, [0, 1], [isPast ? 185 : isFuture ? 125 : 155, 255]);
-  const b = interpolate(activeProgress, [0, 1], [isPast ? 180 : isFuture ? 120 : 150, 255]);
-  const alpha = interpolate(activeProgress, [0, 1], [isPast ? 0.58 : isFuture ? 0.28 : 0.45, 1.0]);
+  // Clean white color with smooth opacity transition
+  const opacity = interpolate(progress, [0, 1], [isPast ? 0.55 : 0.3, 1.0]);
+  const scale = interpolate(progress, [0, 1], [1.0, 1.05]);
+  const fontWeight = progress > 0.5 ? 700 : 600;
 
-  const scale = interpolate(activeProgress, [0, 1], [1.0, theme.caption.highlightScale]);
-  const glowRadius = interpolate(activeProgress, [0, 1], [0, theme.caption.glowRadius]);
-  const glowOpacity = interpolate(activeProgress, [0, 1], [0, 0.45]);
-  const underlineOp = interpolate(activeProgress, [0, 0.4, 1], [0, 0.2, 0.85]);
-  const fontWeight = Math.round(interpolate(activeProgress, [0, 1], [600, theme.caption.fontWeight]));
-
-  const emphasisScale = isEmphasis ? 1.18 : 1;
-  const wordFontSize = isEmphasis ? fontSize * 1.2 : fontSize;
+  // Subtle gold tint when active
+  const goldTint = interpolate(progress, [0, 1], [0, 30]);
+  const r = Math.round(255);
+  const g = Math.round(255 - goldTint * 0.2);
+  const b = Math.round(255 - goldTint);
 
   return (
-    <span style={{
-      display: 'inline-block', position: 'relative',
-      color: `rgba(${Math.round(r)}, ${Math.round(g)}, ${Math.round(b)}, ${alpha})`,
-      fontSize: wordFontSize, fontFamily: theme.fonts.caption,
-      fontWeight,
-      transform: `scale(${scale * emphasisScale})`,
-      textShadow: glowRadius > 0.5
-        ? `0 0 ${glowRadius}px rgba(212,175,55,${glowOpacity}), 0 0 ${glowRadius * 2.5}px ${theme.gold.glowSoft}, 0 4px 14px rgba(0,0,0,0.6)`
-        : '0 3px 10px rgba(0,0,0,0.5)',
-      WebkitTextStroke: `${theme.caption.stroke.width}px ${theme.caption.stroke.color}`,
-      paintOrder: 'stroke fill',
-      marginRight: theme.caption.wordGap,
-      lineHeight: theme.caption.lineHeight,
-      willChange: 'transform, color',
-      WebkitFontSmoothing: 'antialiased',
-    }}>
+    <span
+      style={{
+        display: 'inline-block',
+        position: 'relative',
+        color: `rgba(${r}, ${g}, ${b}, ${opacity})`,
+        fontSize,
+        fontFamily: theme.fonts.caption,
+        fontWeight,
+        transform: `scale(${scale})`,
+        transformOrigin: 'center bottom',
+        textShadow: progress > 0.3
+          ? `0 0 8px rgba(212,175,55,${progress * 0.3}), 0 3px 8px rgba(0,0,0,0.6)`
+          : '0 3px 8px rgba(0,0,0,0.5)',
+        margin: '0 10px',
+        lineHeight: 1.45,
+        WebkitFontSmoothing: 'antialiased',
+      }}
+    >
       {word.word}
-      {underlineOp > 0.05 && (
-        <div style={{
-          position: 'absolute', bottom: -5,
-          left: '3%', right: '3%', height: 3.5,
-          borderRadius: 2,
-          background: theme.gold.metallic,
-          opacity: underlineOp,
-          boxShadow: `0 0 12px rgba(212,175,55,${underlineOp * 0.5})`,
-        }} />
-      )}
     </span>
   );
 };
 
 /* ═══════════════════════════════════════════════
-   CAPTION PAGE — Icon-Text Composition
+   CAPTION PAGE — Center-locked with Z-depth
    ═══════════════════════════════════════════════ */
 const CaptionPage = ({ line, lineIdx, fps }) => {
   const frame = useCurrentFrame();
   const { fps: configFps } = useVideoConfig();
-  const offset = theme.timing.captionOffsetSec;
 
   const pageDurFrames = Math.ceil((line.end - line.start) * fps);
-  const pageStartSec = line.start;
-
   const comp = COMPOSITIONS[lineIdx % COMPOSITIONS.length];
-  const fontSize = getDynamicFontSize(line.words.length, comp.sizeMultiplier);
   const iconName = getIconForLine(lineIdx);
 
-  const emphasisIdx = line.words.reduce((best, w, i) =>
-    w.word.length > (line.words[best]?.word.length || 0) ? i : best, 0);
+  // Dynamic font size based on word count
+  const wordCount = line.words.length;
+  const baseFontSize = theme.caption.fontSize || 55;
+  const fontSize = wordCount <= 2
+    ? Math.round(baseFontSize * 1.4)
+    : wordCount <= 3
+    ? Math.round(baseFontSize * 1.15)
+    : baseFontSize;
 
-  // ── ENTRANCE ──
+  // ═══ Z-AXIS ENTRANCE ═══
+  // Text emerges from depth (scale 0.7 → 1.0) with perspective
   const enterSpring = spring({
-    frame, fps: configFps,
-    config: { damping: 12, stiffness: 180, mass: 0.35 },
-    durationInFrames: 14,
+    frame,
+    fps: configFps,
+    config: { damping: 18, stiffness: 100, mass: 0.6 },
+    durationInFrames: 18,
   });
-  const slideX = interpolate(enterSpring, [0, 1], [comp.slideFrom.x, 0]);
-  const slideY = interpolate(enterSpring, [0, 1], [comp.slideFrom.y, 0]);
-  const entryScale = interpolate(enterSpring, [0, 1], [0.85, 1.0]);
-  const entryOpacity = interpolate(frame, [0, 6], [0, 1], {
+
+  // Z-depth: starts far away, comes to rest
+  const entryZ = interpolate(enterSpring, [0, 1], [-120, 0]);
+  const entryScale = interpolate(enterSpring, [0, 1], [0.7, 1.0]);
+  const entryOpacity = interpolate(enterSpring, [0, 1], [0, 1]);
+  const entryRotateX = interpolate(enterSpring, [0, 1], [8, 0]);
+
+  // Slow continuous zoom during display (Ken Burns effect)
+  const breathe = interpolate(frame, [0, pageDurFrames], [1.0, 1.04], {
     extrapolateLeft: 'clamp', extrapolateRight: 'clamp',
   });
 
-  // ── CONTINUOUS ENLARGEMENT ──
-  const breatheProgress = interpolate(frame, [0, pageDurFrames], [0, 1], {
-    extrapolateLeft: 'clamp', extrapolateRight: 'clamp',
-  });
-  const breatheScale = 1 + breatheProgress * theme.caption.breatheScale;
-
-  // ── EXIT ──
-  const exitStart = pageDurFrames + 2;
-  const exitDur = theme.timing.exitFrames;
-  const exitProgress = interpolate(frame, [exitStart, exitStart + exitDur], [0, 1], {
+  // ═══ Z-AXIS EXIT ═══
+  // Text recedes back into depth
+  const exitStart = pageDurFrames + 3;
+  const exitProgress = interpolate(frame, [exitStart, exitStart + 10], [0, 1], {
     extrapolateLeft: 'clamp', extrapolateRight: 'clamp',
     easing: EASE_EXIT,
   });
-  const exitSlideX = interpolate(exitProgress, [0, 1], [0, comp.slideExit.x]);
-  const exitSlideY = interpolate(exitProgress, [0, 1], [0, comp.slideExit.y]);
-  const exitScale = interpolate(exitProgress, [0, 1], [1.0, 0.88]);
+  const exitZ = interpolate(exitProgress, [0, 1], [0, 80]);
+  const exitScale = interpolate(exitProgress, [0, 1], [1.0, 0.85]);
   const exitOpacity = 1 - exitProgress;
+  const exitRotateX = interpolate(exitProgress, [0, 1], [0, -5]);
 
-  const totalX = slideX + exitSlideX;
-  const totalY = slideY + exitSlideY;
-  const totalScale = entryScale * exitScale * breatheScale;
+  const totalScale = entryScale * exitScale * breathe;
+  const totalZ = entryZ + exitZ;
   const totalOpacity = entryOpacity * exitOpacity;
-
-  const absoluteTimeSec = pageStartSec + (frame / fps) - offset;
-
-  const iconDrawComplete = interpolate(frame, [theme.timing.iconDrawFrames, theme.timing.iconDrawFrames + 10], [0, 1], {
-    extrapolateLeft: 'clamp', extrapolateRight: 'clamp',
-  });
+  const totalRotateX = entryRotateX + exitRotateX;
 
   if (totalOpacity < 0.01) return null;
 
-  // ── Build icon-text layout based on placement ──
-  const iconElement = (
-    <GlowIcon iconName={iconName} size={comp.iconSize} delay={2} />
-  );
+  const absoluteTimeSec = line.start + (frame / fps);
 
-  const textElement = (
+  // Icon element
+  const iconEl = <GlowIcon iconName={iconName} size={comp.iconSize} delay={2} />;
+
+  // Text element
+  const textEl = (
     <div style={{
-      textAlign: comp.textAlign,
-      transform: `translate(${comp.textShift.x}px, ${comp.textShift.y}px)`,
+      display: 'flex',
+      flexWrap: 'wrap',
+      justifyContent: 'center',
+      alignItems: 'center',
+      maxWidth: 900,
     }}>
       {line.words.map((word, wi) => (
         <SmoothWord
@@ -266,78 +201,85 @@ const CaptionPage = ({ line, lineIdx, fps }) => {
           absoluteTimeSec={absoluteTimeSec}
           fps={fps}
           fontSize={fontSize}
-          isEmphasis={wi === emphasisIdx}
         />
       ))}
     </div>
   );
 
-  // Render the composition based on icon placement
-  let innerLayout;
-
-  if (comp.iconPlacement === 'above') {
-    innerLayout = (
+  // Build layout based on icon position
+  let layout;
+  if (comp.iconPos === 'above') {
+    layout = (
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 24 }}>
+        {iconEl}
+        {textEl}
+      </div>
+    );
+  } else if (comp.iconPos === 'left') {
+    layout = (
+      <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 32 }}>
+        {iconEl}
+        {textEl}
+      </div>
+    );
+  } else if (comp.iconPos === 'right') {
+    layout = (
+      <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 32 }}>
+        {textEl}
+        {iconEl}
+      </div>
+    );
+  } else if (comp.iconPos === 'below') {
+    layout = (
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20 }}>
-        {iconElement}
-        {textElement}
+        {textEl}
+        {iconEl}
       </div>
     );
-  } else if (comp.iconPlacement === 'left') {
-    innerLayout = (
-      <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 28 }}>
-        {iconElement}
-        {textElement}
-      </div>
-    );
-  } else if (comp.iconPlacement === 'right') {
-    innerLayout = (
-      <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 28 }}>
-        {textElement}
-        {iconElement}
-      </div>
-    );
-  } else if (comp.iconPlacement === 'inline') {
-    innerLayout = (
-      <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 16 }}>
-        {iconElement}
-        {textElement}
-      </div>
-    );
-  } else if (comp.iconPlacement === 'behind') {
-    innerLayout = (
-      <div style={{ position: 'relative' }}>
+  } else { // behind
+    layout = (
+      <div style={{ position: 'relative', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
         <div style={{
-          position: 'absolute', top: '50%', left: '50%',
-          transform: 'translate(-50%, -50%)',
-          opacity: 0.15,
+          position: 'absolute',
+          opacity: 0.12,
+          transform: `scale(${1 + totalScale * 0.1})`,
         }}>
-          {iconElement}
+          {iconEl}
         </div>
         <div style={{ position: 'relative', zIndex: 2 }}>
-          {textElement}
+          {textEl}
         </div>
       </div>
     );
   }
 
   return (
-    <AbsoluteFill style={{ pointerEvents: 'none' }}>
+    <AbsoluteFill style={{
+      pointerEvents: 'none',
+      perspective: '1200px',
+    }}>
+      {/* Light cast from icon */}
       <IconLightCast
-        x={comp.lightCast.x}
-        y={comp.lightCast.y}
-        intensity={iconDrawComplete * totalOpacity}
+        x="50%"
+        y="45%"
+        intensity={entryOpacity * exitOpacity * 0.8}
       />
 
+      {/* ── PERFECT CENTER CONTAINER ──
+          Flexbox guarantees dead-center on screen.
+          Z-depth transform gives cinematic depth feel. */}
       <div style={{
         position: 'absolute',
-        ...comp.anchor,
-        maxWidth: 960,
-        padding: '10px 24px',
+        inset: 0,
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
         opacity: totalOpacity,
-        transform: `translate(${totalX}px, ${totalY}px) scale(${totalScale})`,
+        transform: `translateZ(${totalZ}px) scale(${totalScale}) rotateX(${totalRotateX}deg)`,
+        transformStyle: 'preserve-3d',
         willChange: 'transform, opacity',
       }}>
-        {innerLayout}
+        {layout}
       </div>
     </AbsoluteFill>
   );
@@ -348,10 +290,10 @@ const CaptionPage = ({ line, lineIdx, fps }) => {
    ═══════════════════════════════════════════════ */
 export const CaptionOverlay = ({ words = [], introFrames = 0 }) => {
   const { fps } = useVideoConfig();
-  const offset = theme.timing.captionOffsetSec;
+  const offset = theme.timing.captionOffsetSec || 0;
 
   const lines = useMemo(
-    () => groupWordsIntoLines(words, theme.caption.wordsPerLine),
+    () => groupWordsIntoLines(words, theme.caption.wordsPerLine || 4),
     [words]
   );
 
