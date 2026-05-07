@@ -30,7 +30,7 @@ import { theme } from '../utils/theme.js';
 import { GlowIcon, IconLightCast, getIconForLine } from './IconLibrary.jsx';
 
 const EASE_EXIT = Easing.bezier(0.4, 0, 0.2, 1);
-const HIGHLIGHT_RAMP = 4;
+const HIGHLIGHT_RAMP = 6;
 
 // ═══ ICON-TEXT COMPOSITIONS ═══
 // Each defines how the icon and text relate spatially

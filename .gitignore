@@ -13,3 +13,8 @@ dist/
 # Temp render files
 render-props.json
 public/audio.*
+public/video.*
+
+# Large video files (use GitHub Releases or artifacts)
+input/tiktok_ready.mp4
+input/IMG_3444.MOV

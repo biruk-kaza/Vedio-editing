@@ -72,11 +72,20 @@ function loadCaptions() {
 function findMediaFiles() {
   const inputDir = path.join(__dirname, 'input');
   const audioExts = ['.mp3', '.ogg', '.wav', '.m4a', '.flac', '.aac'];
-  const videoExts = ['.mov', '.mp4', '.webm', '.avi', '.mkv'];
+  const videoExts = ['.mp4', '.webm', '.mov', '.avi', '.mkv']; // mp4 first priority
   if (!fs.existsSync(inputDir)) throw new Error('input/ directory not found');
   const files = fs.readdirSync(inputDir);
 
-  const videoFile = files.find(f => videoExts.includes(path.extname(f).toLowerCase()));
+  // Find all video files, pick the largest one (most likely the final render)
+  const videoFiles = files.filter(f => videoExts.includes(path.extname(f).toLowerCase()));
+  let videoFile = null;
+  if (videoFiles.length > 0) {
+    videoFile = videoFiles.sort((a, b) => {
+      const sA = fs.statSync(path.join(inputDir, a)).size;
+      const sB = fs.statSync(path.join(inputDir, b)).size;
+      return sB - sA; // largest first
+    })[0];
+  }
   const audioFile = files.find(f => audioExts.includes(path.extname(f).toLowerCase()));
 
   return {

@@ -25,7 +25,7 @@ import {
 import { theme } from '../utils/theme.js';
 
 // Smooth ramp duration (frames) for highlight transition
-const HIGHLIGHT_RAMP = 4;
+const HIGHLIGHT_RAMP = 6;
 
 function groupWordsIntoLines(words, max) {
   const lines = [];
@@ -90,11 +90,11 @@ const SmoothWord = ({ word, absoluteTimeSec, fps }) => {
   const alpha = interpolate(activeProgress, [0, 1], [isPast ? 0.6 : 0.32, 1.0]);
 
   // Scale: smooth pop
-  const scale = interpolate(activeProgress, [0, 1], [1.0, 1.08]);
+  const scale = interpolate(activeProgress, [0, 1], [1.0, 1.12]);
 
   // Glow: smooth ramp
-  const glowRadius = interpolate(activeProgress, [0, 1], [0, 16]);
-  const glowOpacity = interpolate(activeProgress, [0, 1], [0, 0.4]);
+  const glowRadius = interpolate(activeProgress, [0, 1], [0, 22]);
+  const glowOpacity = interpolate(activeProgress, [0, 1], [0, 0.5]);
 
   // Underline opacity
   const underlineOp = interpolate(activeProgress, [0, 0.5, 1], [0, 0.3, 0.9]);
@@ -106,15 +106,15 @@ const SmoothWord = ({ word, absoluteTimeSec, fps }) => {
     <span style={{
       display: 'inline-block', position: 'relative',
       color: `rgba(${Math.round(r)}, ${Math.round(g)}, ${Math.round(b)}, ${alpha})`,
-      fontSize: 52, fontFamily: theme.fonts.caption,
+      fontSize: 92, fontFamily: theme.fonts.caption,
       fontWeight,
       transform: `scale(${scale})`,
       textShadow: glowRadius > 0.5
-        ? `0 0 ${glowRadius}px rgba(212,175,55,${glowOpacity}), 0 2px 8px rgba(0,0,0,0.6)`
-        : '0 2px 8px rgba(0,0,0,0.6)',
-      WebkitTextStroke: '1px rgba(0,0,0,0.3)',
+        ? `0 0 ${glowRadius}px rgba(212,175,55,${glowOpacity}), 0 0 ${glowRadius * 2.5}px rgba(212,175,55,${glowOpacity * 0.4}), 0 4px 16px rgba(0,0,0,0.85)`
+        : '0 4px 16px rgba(0,0,0,0.85)',
+      WebkitTextStroke: '3px rgba(0,0,0,0.5)',
       paintOrder: 'stroke fill',
-      marginRight: 16,
+      marginRight: 20,
       lineHeight: 1.4,
       willChange: 'transform, color',
       WebkitFontSmoothing: 'antialiased',
@@ -124,7 +124,7 @@ const SmoothWord = ({ word, absoluteTimeSec, fps }) => {
       {underlineOp > 0.05 && (
         <div style={{
           position: 'absolute', bottom: -4,
-          left: '5%', right: '5%', height: 3,
+          left: '5%', right: '5%', height: 4,
           borderRadius: 2,
           background: theme.gold.metallic,
           opacity: underlineOp,
@@ -182,7 +182,7 @@ const CaptionLine = ({ line, fps }) => {
 
       {/* Caption container — bottom 20% */}
       <div style={{
-        position: 'absolute', bottom: '10%', left: '5%', right: '5%',
+        position: 'absolute', bottom: '14%', left: '3%', right: '3%',
         textAlign: 'center',
         opacity: totalOpacity,
         transform: `translateY(${entryY + exitY}px) scale(${entryScale})`,
