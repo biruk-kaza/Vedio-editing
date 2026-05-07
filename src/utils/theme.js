@@ -1,17 +1,16 @@
 /**
  * EOTC Voice Studio — Ultra-Premium Design System
  * 
- * ═══ VISUAL DIRECTION ═══
- * Theme: Luxury minimalist. Deep black canvas.
- * Gold: Champagne metallic gradient accents.
- * Motion: Zero linear easing. All cubic-bezier / spring.
+ * ═══ NATE HERK–LEVEL VISUAL DIRECTION ═══
+ * Theme: Clean, punchy, modern. Deep black canvas.
+ * Gold: Bright champagne highlights — snappy, not gradual.
+ * Motion: Punchy spring overshoots. Tight 10-frame transitions.
+ * Typography: Bold, centered, massive. No clutter.
  * 
- * ═══ CUSTOM EASING CURVES ═══
- * glowReveal:  bezier(0.16, 1, 0.3, 1)    — exponential ease-out
- * springPop:   bezier(0.34, 1.56, 0.64, 1) — spring with overshoot
- * smoothExit:  bezier(0.4, 0, 0.2, 1)      — Material standard
- * silkIn:      bezier(0.0, 0.0, 0.2, 1)    — very smooth ease-in
- * silkOut:     bezier(0.4, 0.0, 1.0, 1.0)  — smooth ease-out
+ * ═══ EASING CURVES ═══
+ * punchyEnter:  bezier(0.34, 1.56, 0.64, 1)  — overshoot spring pop
+ * crispEnter:   bezier(0.16, 1, 0.3, 1)       — fast deceleration
+ * smoothExit:   bezier(0.4, 0, 0.2, 1)        — smooth departure
  */
 
 export const theme = {
@@ -24,7 +23,7 @@ export const theme = {
     gradient4: '#080614',
   },
 
-  // ── Champagne Gold Accents ──
+  // ── Champagne Gold ──
   gold: {
     primary: '#c9a96e',
     bright: '#e8d5a3',
@@ -36,15 +35,15 @@ export const theme = {
     subtle: 'rgba(201, 169, 110, 0.08)',
   },
 
-  // ── Text Colors ──
+  // ── Text Colors — Punchy contrast ──
   text: {
-    // Active words illuminate to bright white-gold
-    active: '#f5edd8',
-    // Past words settle to clean muted tone
-    past: 'rgba(220, 215, 205, 0.75)',
-    // Future words are barely visible
-    future: 'rgba(180, 175, 165, 0.28)',
-    // Intro/outro text
+    // Active word: bright white pop (not gold — Nate Herk style)
+    active: '#ffffff',
+    // Surrounding words: clean visible white
+    past: 'rgba(220, 215, 205, 0.65)',
+    // Future words: muted but readable
+    future: 'rgba(180, 175, 165, 0.32)',
+    // Intro/outro
     primary: '#f0ebe0',
   },
 
@@ -63,23 +62,20 @@ export const theme = {
     display: "'Inter', 'Noto Sans', sans-serif",
   },
 
-  // ── Caption Layout — 1-3 words, centered, massive ──
+  // ── Caption Layout ──
   caption: {
-    fontSize: 68,
-    fontWeight: 700,
-    lineHeight: 1.4,
+    fontSize: 72,        // Bigger = punchier
+    fontWeight: 800,     // Extra bold
+    lineHeight: 1.35,
     maxWidth: 920,
-    wordGap: 18,
+    wordGap: 20,
     wordsPerLine: 3,
-    // Glow reveal scale range
-    scaleFrom: 0.94,
-    scaleTo: 1.0,
-    // Active word highlight scale
-    highlightScale: 1.06,
+    // Active word pop scale
+    highlightScale: 1.08,
     // Glow radius for active word
-    glowRadius: 22,
-    // Text stroke
-    stroke: { width: 2.5, color: 'rgba(0, 0, 0, 0.65)' },
+    glowRadius: 18,
+    // Text stroke (for readability on dark bg)
+    stroke: { width: 2, color: 'rgba(0, 0, 0, 0.5)' },
   },
 
   // ── Video ──
@@ -89,19 +85,19 @@ export const theme = {
     fps: 30,
   },
 
-  // ── Timing ──
+  // ── Timing — Snappy, punchy ──
   timing: {
-    introDuration: 90,
-    outroDuration: 90,
-    // Glow reveal entrance duration (frames)
-    revealFrames: 14,
-    // Exit drift duration (frames)
-    exitFrames: 12,
-    // Word stagger delay (frames between each word)
-    wordStagger: 2,
-    // Caption offset — positive = words appear later (fixes "too fast")
+    introDuration: 90,    // 3 seconds
+    outroDuration: 90,    // 3 seconds
+    // Entry: fast spring pop (10 frames = 0.33s)
+    revealFrames: 10,
+    // Exit: quick departure (8 frames)
+    exitFrames: 8,
+    // Word stagger: tight (1 frame apart = rapid-fire)
+    wordStagger: 1,
+    // Caption offset
     captionOffsetSec: 0.10,
-    // Spring config for word pop
-    wordSpring: { damping: 13, mass: 0.4, stiffness: 180 },
+    // Word spring: punchy overshoot
+    wordSpring: { damping: 12, mass: 0.3, stiffness: 220 },
   },
 };
