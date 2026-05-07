@@ -20,10 +20,13 @@ const __dirname = path.dirname(__filename);
 // ── Parse CLI Args ──
 function parseArgs() {
   const args = process.argv.slice(2);
-  const parsed = { title: 'EOTC Voice Studio' };
+  const parsed = { title: 'EOTC Voice Studio', mode: '' };
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '--title' && args[i + 1]) {
       parsed.title = args[++i];
+    }
+    if (args[i] === '--mode' && args[i + 1]) {
+      parsed.mode = args[++i]; // 'kinetic' or 'caption'
     }
   }
   return parsed;
@@ -114,10 +117,10 @@ function main() {
 
   let videoFileName = '';
   let audioFileName = '';
-  let mode = 'kinetic'; // Default: text-only dark background
+  let mode = args.mode || 'kinetic'; // Default or forced via --mode
 
-  // Video mode: copy video to public/ (video contains its own audio)
-  if (videoPath) {
+  // Video mode: copy video to public/
+  if (videoPath && mode !== 'kinetic') {
     const vExt = path.extname(videoPath);
     videoFileName = `video${vExt}`;
     fs.copyFileSync(videoPath, path.join(publicDir, videoFileName));
