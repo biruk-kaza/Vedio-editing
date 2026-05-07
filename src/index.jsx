@@ -37,6 +37,8 @@ export const RemotionRoot = () => {
         defaultProps={{
           words: DEMO_WORDS,
           audioFileName: '',
+          videoFileName: '',
+          mode: 'kinetic',
           title: 'EOTC Voice Studio',
           totalDuration: 5.2,
           totalSeconds: 11.7,

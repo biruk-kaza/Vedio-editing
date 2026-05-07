@@ -17,6 +17,11 @@ on:
         required: false
         default: "EOTC Voice Studio"
         type: string
+      video_url:
+        description: "Direct URL to the background video (for caption overlay mode). Leave empty for kinetic mode."
+        required: false
+        default: ""
+        type: string
 
 concurrency:
   group: render-${{ github.ref }}
@@ -29,7 +34,7 @@ jobs:
   render:
     name: "🎬 Remotion Render"
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 90
 
     steps:
       # ─────────────────────────────────────
@@ -39,7 +44,7 @@ jobs:
         uses: actions/checkout@v4
 
       # ─────────────────────────────────────
-      # 2. Validate that captions + audio exist
+      # 2. Validate inputs (audio OR video)
       # ─────────────────────────────────────
       - name: "🔍 Validate Inputs"
         id: validate
@@ -58,14 +63,35 @@ jobs:
           fi
           echo "✅ Captions found"
 
-          # Check audio
-          AUDIO_FILE=$(find input/ -type f \( -name "*.mp3" -o -name "*.ogg" -o -name "*.wav" -o -name "*.m4a" -o -name "*.flac" -o -name "*.aac" \) 2>/dev/null | head -n 1)
-          if [ -z "$AUDIO_FILE" ]; then
-            echo "❌ ERROR: No audio file in input/"
-            exit 1
+          # Check for video file (from URL input or in input/)
+          VIDEO_URL="${{ github.event.inputs.video_url }}"
+          if [ -n "$VIDEO_URL" ]; then
+            echo "📥 Downloading video from URL..."
+            mkdir -p input
+            curl -L -o "input/video_input.mp4" "$VIDEO_URL" || { echo "❌ Failed to download video"; exit 1; }
+            echo "✅ Video downloaded: input/video_input.mp4"
+            echo "media_type=video" >> $GITHUB_OUTPUT
+            echo "media_file=input/video_input.mp4" >> $GITHUB_OUTPUT
+          else
+            # Check for video in input/
+            VIDEO_FILE=$(find input/ -type f \( -name "*.mp4" -o -name "*.mov" -o -name "*.webm" \) 2>/dev/null | head -n 1)
+            if [ -n "$VIDEO_FILE" ]; then
+              echo "✅ Video: $VIDEO_FILE"
+              echo "media_type=video" >> $GITHUB_OUTPUT
+              echo "media_file=$VIDEO_FILE" >> $GITHUB_OUTPUT
+            else
+              # Fall back to audio
+              AUDIO_FILE=$(find input/ -type f \( -name "*.mp3" -o -name "*.ogg" -o -name "*.wav" -o -name "*.m4a" -o -name "*.flac" -o -name "*.aac" \) 2>/dev/null | head -n 1)
+              if [ -z "$AUDIO_FILE" ]; then
+                echo "❌ ERROR: No audio or video file in input/"
+                echo "   Either add a media file to input/ or provide a video_url"
+                exit 1
+              fi
+              echo "✅ Audio: $AUDIO_FILE"
+              echo "media_type=audio" >> $GITHUB_OUTPUT
+              echo "media_file=$AUDIO_FILE" >> $GITHUB_OUTPUT
+            fi
           fi
-          echo "✅ Audio: $AUDIO_FILE"
-          echo "audio_file=$AUDIO_FILE" >> $GITHUB_OUTPUT
 
       # ─────────────────────────────────────
       # 3. Setup Node.js
@@ -106,7 +132,9 @@ jobs:
       - name: "🎬 Render with Remotion"
         run: |
           QUALITY="${{ github.event.inputs.quality || 'high' }}"
+          MEDIA_TYPE="${{ steps.validate.outputs.media_type }}"
           echo "🎨 Quality preset: $QUALITY"
+          echo "🎯 Media type: $MEDIA_TYPE"
           echo ""
 
           # Set quality flags
@@ -207,6 +235,7 @@ jobs:
         run: |
           rm -f render-props.json
           rm -f public/audio.*
+          rm -f public/video.*
           echo "✅ Cleaned up temp files"
 
       # ─────────────────────────────────────
@@ -222,19 +251,20 @@ jobs:
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "| Detail | Value |" >> $GITHUB_STEP_SUMMARY
             echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
-            echo "| 🎵 Audio | \`${{ steps.validate.outputs.audio_file }}\` |" >> $GITHUB_STEP_SUMMARY
+            echo "| 🎯 Mode | ${{ steps.validate.outputs.media_type }} |" >> $GITHUB_STEP_SUMMARY
+            echo "| 🎵 Media | \`${{ steps.validate.outputs.media_file }}\` |" >> $GITHUB_STEP_SUMMARY
             echo "| 🎨 Quality | ${{ github.event.inputs.quality || 'high' }} |" >> $GITHUB_STEP_SUMMARY
             echo "| 📐 Resolution | 1080×1920 (9:16) |" >> $GITHUB_STEP_SUMMARY
             echo "| 🎞️ Engine | Remotion 4.0 |" >> $GITHUB_STEP_SUMMARY
             echo "| 📦 Size | ${{ steps.info.outputs.size }}MB |" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "### ✨ Visual Effects" >> $GITHUB_STEP_SUMMARY
-            echo "- Cinematic animated gradient background" >> $GITHUB_STEP_SUMMARY
-            echo "- Floating golden particle field" >> $GITHUB_STEP_SUMMARY
-            echo "- Volumetric god-ray light effects" >> $GITHUB_STEP_SUMMARY
-            echo "- Word-by-word animated captions with gold glow" >> $GITHUB_STEP_SUMMARY
-            echo "- Spring-animated intro & outro sequences" >> $GITHUB_STEP_SUMMARY
-            echo "- Ethiopian Orthodox cross watermark" >> $GITHUB_STEP_SUMMARY
+            echo "- Metallic gold text with moving specular shine" >> $GITHUB_STEP_SUMMARY
+            echo "- Floating golden dust motes" >> $GITHUB_STEP_SUMMARY
+            echo "- Anamorphic light leak overlays" >> $GITHUB_STEP_SUMMARY
+            echo "- Handheld camera shake (organic micro-motion)" >> $GITHUB_STEP_SUMMARY
+            echo "- Smart rhythmic word grouping" >> $GITHUB_STEP_SUMMARY
+            echo "- Silky smooth 6-frame word highlighting" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "### 📥 Download" >> $GITHUB_STEP_SUMMARY
             echo "Download from the **Artifacts** section above." >> $GITHUB_STEP_SUMMARY
