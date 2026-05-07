@@ -1,13 +1,14 @@
 /**
  * EOTC Voice Studio — Remotion Entry Point
  * 
- * Registers the EOTCVideo composition with Remotion.
- * Uses calculateMetadata to dynamically set video duration
- * based on the audio length passed via props.
+ * ✅ Zod schema for type-safe CLI rendering
+ * ✅ calculateMetadata for dynamic duration
+ * ✅ Schema exported for external use
  */
 import React from 'react';
 import { Composition, registerRoot } from 'remotion';
 import { EOTCVideo } from './Video.jsx';
+import { eotcVideoSchema } from './schema.js';
 import { theme } from './utils/theme.js';
 
 // Demo words for Remotion Studio preview
@@ -28,7 +29,7 @@ export const RemotionRoot = () => {
       <Composition
         id="EOTCVideo"
         component={EOTCVideo}
-        // Default duration for Studio preview (overridden by calculateMetadata)
+        schema={eotcVideoSchema}
         durationInFrames={theme.video.fps * 15}
         fps={theme.video.fps}
         width={theme.video.width}
@@ -39,9 +40,14 @@ export const RemotionRoot = () => {
           title: 'EOTC Voice Studio',
           totalDuration: 5.2,
           totalSeconds: 11.7,
+          brandColors: {
+            goldPrimary: '#c9a96e',
+            goldBright: '#e8d5a3',
+            bgDeep: '#030305',
+          },
+          showProgressBar: true,
         }}
         calculateMetadata={async ({ props }) => {
-          // Dynamically calculate video duration from props
           const fps = theme.video.fps;
           const totalSec = props.totalSeconds || 15;
           return {
