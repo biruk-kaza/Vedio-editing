@@ -29,7 +29,7 @@ const ICON_PATHS = {
       'M 20 32 L 76 32', // horizontal
     ],
     viewBox: '0 0 96 100',
-    strokeWidth: 5,
+    strokeWidth: 7,
     totalLength: 140,
   },
   book: {
@@ -41,7 +41,7 @@ const ICON_PATHS = {
       'M 84 20 L 84 78 C 84 78, 68 74, 48 80',
     ],
     viewBox: '0 0 96 96',
-    strokeWidth: 3.5,
+    strokeWidth: 5,
     totalLength: 320,
   },
   dove: {
@@ -51,7 +51,7 @@ const ICON_PATHS = {
       'M 20 60 L 8 72', // tail
     ],
     viewBox: '0 0 96 96',
-    strokeWidth: 3,
+    strokeWidth: 5,
     totalLength: 250,
   },
   candle: {
@@ -62,7 +62,7 @@ const ICON_PATHS = {
       'M 48 38 Q 40 20, 48 8 Q 56 20, 48 38', // flame
     ],
     viewBox: '0 0 96 96',
-    strokeWidth: 3.5,
+    strokeWidth: 5.5,
     totalLength: 180,
   },
   church: {
@@ -74,7 +74,7 @@ const ICON_PATHS = {
       'M 42 82 L 42 62 L 54 62 L 54 82', // door
     ],
     viewBox: '0 0 96 96',
-    strokeWidth: 3,
+    strokeWidth: 5,
     totalLength: 300,
   },
   prayer: {
@@ -84,7 +84,7 @@ const ICON_PATHS = {
       'M 44 35 Q 48 25, 52 35', // fingertips
     ],
     viewBox: '0 0 96 96',
-    strokeWidth: 3.5,
+    strokeWidth: 5.5,
     totalLength: 160,
   },
   sun: {
@@ -96,7 +96,7 @@ const ICON_PATHS = {
       'M 70 26 L 62 34', 'M 34 62 L 26 70', // diagonal
     ],
     viewBox: '0 0 96 96',
-    strokeWidth: 3,
+    strokeWidth: 5,
     totalLength: 280,
   },
   bell: {
@@ -107,7 +107,7 @@ const ICON_PATHS = {
       'M 44 62 Q 44 72, 48 74 Q 52 72, 52 62', // clapper
     ],
     viewBox: '0 0 96 96',
-    strokeWidth: 3.5,
+    strokeWidth: 5.5,
     totalLength: 220,
   },
 };
@@ -162,7 +162,7 @@ export const GlowIcon = ({ iconName = 'cross', size = 80, delay = 0 }) => {
   const specularIntensity = interpolate(drawProgress, [0, 0.5, 0.9, 1], [0, 1, 0.6, 0.3]);
 
   // Glow radius grows as icon completes
-  const glowRadius = interpolate(glowProgress, [0, 1], [0, 20]);
+  const glowRadius = interpolate(glowProgress, [0, 1], [0, 35]);
 
   if (opacity < 0.01) return null;
 
@@ -190,7 +190,7 @@ export const GlowIcon = ({ iconName = 'cross', size = 80, delay = 0 }) => {
             strokeLinecap="round"
             strokeLinejoin="round"
             fill="none"
-            opacity={glowProgress * 0.3}
+            opacity={glowProgress * 0.6}
             filter="url(#iconBlur)"
           />
         ))}
@@ -226,7 +226,7 @@ export const GlowIcon = ({ iconName = 'cross', size = 80, delay = 0 }) => {
             fill="none"
             strokeDasharray={`${8} ${iconData.totalLength}`}
             strokeDashoffset={iconData.totalLength * (1 - drawProgress) - 4}
-            opacity={specularIntensity * 0.8}
+            opacity={specularIntensity * 1.0}
           />
         ))}
 
@@ -254,7 +254,7 @@ export const IconLightCast = ({ x = '50%', y = '40%', intensity = 0 }) => {
   return (
     <div style={{
       position: 'absolute', inset: 0,
-      background: `radial-gradient(ellipse 40% 30% at ${x} ${y}, rgba(212,175,55,${0.06 * intensity}) 0%, transparent 70%)`,
+      background: `radial-gradient(ellipse 45% 35% at ${x} ${y}, rgba(212,175,55,${0.12 * intensity}) 0%, transparent 70%)`,
       pointerEvents: 'none',
       zIndex: 5,
     }} />

@@ -1,21 +1,20 @@
 /**
  * EOTC Voice Studio — Cinema-Grade Kinetic Typography
  * 
- * ═══ THE "CENTER ZONE VARIETY" PRINCIPLE ═══
- * Eyes stay focused on ONE comfort zone (center 35-55% of screen)
- * but every phrase FEELS different through:
+ * ═══ ICON-TEXT COMPOSITION ═══
+ * Icon and text form a SINGLE UNIT. Text shifts based
+ * on where the icon lives. Five compositions:
  * 
- *   → Font size changes (1 word = massive, 3 words = normal)
- *   → Horizontal shift (slight left/center/slight right — NOT edges)
- *   → Slide direction (up/left/right/down — still varied)
- *   → Emphasis word sizing (longest word 1.2× bigger)
- *   → Accent line style (top/bottom/left bar/none)
+ * 1. ICON_ABOVE  — icon centered above, text below
+ * 2. ICON_LEFT   — icon on left, text shifts right
+ * 3. ICON_RIGHT  — icon on right, text shifts left
+ * 4. ICON_INLINE — icon inline with text (same row)
+ * 5. ICON_BEHIND — large icon behind, text over it
  * 
- * Result: VARIETY + COMFORT. Eyes never chase the text.
+ * All stay in center comfort zone (38-52% vertical)
  * 
  * ═══ SMOOTH WORD HIGHLIGHTING ═══
- * activeProgress float (0→1→0) over 4-frame ramp.
- * ALL properties derived via interpolate().
+ * activeProgress (0→1→0) over 4-frame ramp
  */
 import React, { useMemo } from 'react';
 import {
@@ -31,66 +30,72 @@ import { theme } from '../utils/theme.js';
 import { GlowIcon, IconLightCast, getIconForLine } from './IconLibrary.jsx';
 
 const EASE_EXIT = Easing.bezier(0.4, 0, 0.2, 1);
-const HIGHLIGHT_RAMP = 4; // frames for smooth highlight transition
+const HIGHLIGHT_RAMP = 4;
 
-// ═══ CENTER-ZONE LAYOUTS ═══
-// All stay in the vertical center band (38-52%)
-// Horizontal variety is subtle (±8% from center)
-const LAYOUTS = [
+// ═══ ICON-TEXT COMPOSITIONS ═══
+// Each defines how the icon and text relate spatially
+const COMPOSITIONS = [
   {
-    name: 'CENTER',
-    position: { top: '45%', left: '50%', transform: 'translate(-50%, -50%)' },
-    align: 'center',
-    sizeMultiplier: 1.3,
-    slideFrom: { x: 0, y: 40 },
-    slideExit: { x: 0, y: -20 },
-    iconPos: { top: '-75px', left: '50%', transform: 'translateX(-50%)' },
-    lightCast: { x: '50%', y: '38%' },
-    accentStyle: 'center',
-  },
-  {
-    name: 'SLIGHT_LEFT',
-    position: { top: '43%', left: '42%', transform: 'translate(-50%, -50%)' },
-    align: 'center',
-    sizeMultiplier: 1.05,
-    slideFrom: { x: -50, y: 10 },
-    slideExit: { x: -25, y: -10 },
-    iconPos: { top: '-70px', left: '50%', transform: 'translateX(-50%)' },
-    lightCast: { x: '42%', y: '36%' },
-    accentStyle: 'left',
-  },
-  {
-    name: 'SLIGHT_RIGHT',
-    position: { top: '47%', left: '58%', transform: 'translate(-50%, -50%)' },
-    align: 'center',
-    sizeMultiplier: 1.05,
-    slideFrom: { x: 50, y: 10 },
-    slideExit: { x: 25, y: -10 },
-    iconPos: { top: '-70px', left: '50%', transform: 'translateX(-50%)' },
-    lightCast: { x: '58%', y: '40%' },
-    accentStyle: 'right',
-  },
-  {
-    name: 'CENTER_HIGH',
-    position: { top: '40%', left: '50%', transform: 'translate(-50%, -50%)' },
-    align: 'center',
-    sizeMultiplier: 1.18,
-    slideFrom: { x: 0, y: -35 },
-    slideExit: { x: 0, y: -25 },
-    iconPos: { top: '-72px', left: '50%', transform: 'translateX(-50%)' },
-    lightCast: { x: '50%', y: '33%' },
-    accentStyle: 'center',
-  },
-  {
-    name: 'CENTER_LOW',
-    position: { top: '50%', left: '50%', transform: 'translate(-50%, -50%)' },
-    align: 'center',
-    sizeMultiplier: 1.12,
+    name: 'ICON_ABOVE',
+    // Overall position
+    anchor: { top: '42%', left: '50%', transform: 'translate(-50%, -50%)' },
+    // Icon placement relative to text
+    iconPlacement: 'above',
+    iconSize: 80,
+    textAlign: 'center',
+    textShift: { x: 0, y: 0 },
+    sizeMultiplier: 1.25,
     slideFrom: { x: 0, y: 45 },
-    slideExit: { x: 0, y: 20 },
-    iconPos: { top: '-70px', left: '50%', transform: 'translateX(-50%)' },
-    lightCast: { x: '50%', y: '43%' },
-    accentStyle: 'bottom',
+    slideExit: { x: 0, y: -22 },
+    lightCast: { x: '50%', y: '35%' },
+  },
+  {
+    name: 'ICON_LEFT',
+    anchor: { top: '44%', left: '48%', transform: 'translate(-50%, -50%)' },
+    iconPlacement: 'left',
+    iconSize: 70,
+    textAlign: 'left',
+    textShift: { x: 40, y: 0 },   // text shifts right to make room
+    sizeMultiplier: 1.0,
+    slideFrom: { x: -55, y: 8 },
+    slideExit: { x: -30, y: -8 },
+    lightCast: { x: '35%', y: '38%' },
+  },
+  {
+    name: 'ICON_RIGHT',
+    anchor: { top: '46%', left: '52%', transform: 'translate(-50%, -50%)' },
+    iconPlacement: 'right',
+    iconSize: 70,
+    textAlign: 'right',
+    textShift: { x: -40, y: 0 },   // text shifts left
+    sizeMultiplier: 1.0,
+    slideFrom: { x: 55, y: 8 },
+    slideExit: { x: 30, y: -8 },
+    lightCast: { x: '65%', y: '40%' },
+  },
+  {
+    name: 'ICON_INLINE',
+    anchor: { top: '43%', left: '50%', transform: 'translate(-50%, -50%)' },
+    iconPlacement: 'inline',
+    iconSize: 50,
+    textAlign: 'center',
+    textShift: { x: 0, y: 0 },
+    sizeMultiplier: 1.1,
+    slideFrom: { x: 0, y: -38 },
+    slideExit: { x: 0, y: -20 },
+    lightCast: { x: '50%', y: '36%' },
+  },
+  {
+    name: 'ICON_BEHIND',
+    anchor: { top: '45%', left: '50%', transform: 'translate(-50%, -50%)' },
+    iconPlacement: 'behind',
+    iconSize: 140,
+    textAlign: 'center',
+    textShift: { x: 0, y: 0 },
+    sizeMultiplier: 1.3,
+    slideFrom: { x: 0, y: 50 },
+    slideExit: { x: 0, y: 25 },
+    lightCast: { x: '50%', y: '40%' },
   },
 ];
 
@@ -118,25 +123,17 @@ function groupWordsIntoLines(words, max) {
 }
 
 /* ═══════════════════════════════════════════════
-   SMOOTH WORD — Continuous activeProgress (0→1→0)
-   Highlight flows like liquid across words
+   SMOOTH WORD — Liquid highlight flow
    ═══════════════════════════════════════════════ */
 const SmoothWord = ({ word, absoluteTimeSec, fps, fontSize, isEmphasis }) => {
   const rampSec = HIGHLIGHT_RAMP / fps;
 
-  // Smooth ramp up (4 frames before word.start → 1.0 at word.start)
   const rampIn = interpolate(
-    absoluteTimeSec,
-    [word.start - rampSec, word.start],
-    [0, 1],
+    absoluteTimeSec, [word.start - rampSec, word.start], [0, 1],
     { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }
   );
-
-  // Smooth ramp down (1.0 at word.end → 0 after 4 frames)
   const rampOut = interpolate(
-    absoluteTimeSec,
-    [word.end, word.end + rampSec],
-    [1, 0],
+    absoluteTimeSec, [word.end, word.end + rampSec], [1, 0],
     { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }
   );
 
@@ -144,7 +141,6 @@ const SmoothWord = ({ word, absoluteTimeSec, fps, fontSize, isEmphasis }) => {
   const isPast = absoluteTimeSec > word.end + rampSec;
   const isFuture = absoluteTimeSec < word.start - rampSec;
 
-  // ── ALL properties from activeProgress ──
   const r = interpolate(activeProgress, [0, 1], [isPast ? 190 : isFuture ? 130 : 160, 255]);
   const g = interpolate(activeProgress, [0, 1], [isPast ? 185 : isFuture ? 125 : 155, 255]);
   const b = interpolate(activeProgress, [0, 1], [isPast ? 180 : isFuture ? 120 : 150, 255]);
@@ -192,57 +188,7 @@ const SmoothWord = ({ word, absoluteTimeSec, fps, fontSize, isEmphasis }) => {
 };
 
 /* ═══════════════════════════════════════════════
-   ACCENT LINE — varies per layout
-   ═══════════════════════════════════════════════ */
-const AccentLine = ({ style, opacity }) => {
-  if (style === 'center') {
-    return (
-      <div style={{
-        position: 'absolute', bottom: -18, left: '12%', right: '12%',
-        height: 2, borderRadius: 1,
-        background: `linear-gradient(90deg, transparent, ${theme.gold.primary}, transparent)`,
-        opacity: opacity * 0.45,
-        boxShadow: `0 0 10px ${theme.gold.glow}`,
-      }} />
-    );
-  }
-  if (style === 'left') {
-    return (
-      <div style={{
-        position: 'absolute', left: 0, bottom: -14,
-        width: 50, height: 2.5, borderRadius: 1,
-        backgroundColor: theme.gold.primary,
-        opacity: opacity * 0.5,
-        boxShadow: `0 0 8px ${theme.gold.glow}`,
-      }} />
-    );
-  }
-  if (style === 'right') {
-    return (
-      <div style={{
-        position: 'absolute', right: 0, bottom: -14,
-        width: 50, height: 2.5, borderRadius: 1,
-        backgroundColor: theme.gold.primary,
-        opacity: opacity * 0.5,
-        boxShadow: `0 0 8px ${theme.gold.glow}`,
-      }} />
-    );
-  }
-  if (style === 'bottom') {
-    return (
-      <div style={{
-        position: 'absolute', bottom: -20, left: '25%', right: '25%',
-        height: 1.5, borderRadius: 1,
-        background: `linear-gradient(90deg, transparent, ${theme.gold.warm}, transparent)`,
-        opacity: opacity * 0.35,
-      }} />
-    );
-  }
-  return null;
-};
-
-/* ═══════════════════════════════════════════════
-   CAPTION PAGE
+   CAPTION PAGE — Icon-Text Composition
    ═══════════════════════════════════════════════ */
 const CaptionPage = ({ line, lineIdx, fps }) => {
   const frame = useCurrentFrame();
@@ -252,8 +198,8 @@ const CaptionPage = ({ line, lineIdx, fps }) => {
   const pageDurFrames = Math.ceil((line.end - line.start) * fps);
   const pageStartSec = line.start;
 
-  const layout = LAYOUTS[lineIdx % LAYOUTS.length];
-  const fontSize = getDynamicFontSize(line.words.length, layout.sizeMultiplier);
+  const comp = COMPOSITIONS[lineIdx % COMPOSITIONS.length];
+  const fontSize = getDynamicFontSize(line.words.length, comp.sizeMultiplier);
   const iconName = getIconForLine(lineIdx);
 
   const emphasisIdx = line.words.reduce((best, w, i) =>
@@ -265,9 +211,8 @@ const CaptionPage = ({ line, lineIdx, fps }) => {
     config: { damping: 12, stiffness: 180, mass: 0.35 },
     durationInFrames: 14,
   });
-
-  const slideX = interpolate(enterSpring, [0, 1], [layout.slideFrom.x, 0]);
-  const slideY = interpolate(enterSpring, [0, 1], [layout.slideFrom.y, 0]);
+  const slideX = interpolate(enterSpring, [0, 1], [comp.slideFrom.x, 0]);
+  const slideY = interpolate(enterSpring, [0, 1], [comp.slideFrom.y, 0]);
   const entryScale = interpolate(enterSpring, [0, 1], [0.85, 1.0]);
   const entryOpacity = interpolate(frame, [0, 6], [0, 1], {
     extrapolateLeft: 'clamp', extrapolateRight: 'clamp',
@@ -286,9 +231,8 @@ const CaptionPage = ({ line, lineIdx, fps }) => {
     extrapolateLeft: 'clamp', extrapolateRight: 'clamp',
     easing: EASE_EXIT,
   });
-
-  const exitSlideX = interpolate(exitProgress, [0, 1], [0, layout.slideExit.x]);
-  const exitSlideY = interpolate(exitProgress, [0, 1], [0, layout.slideExit.y]);
+  const exitSlideX = interpolate(exitProgress, [0, 1], [0, comp.slideExit.x]);
+  const exitSlideY = interpolate(exitProgress, [0, 1], [0, comp.slideExit.y]);
   const exitScale = interpolate(exitProgress, [0, 1], [1.0, 0.88]);
   const exitOpacity = 1 - exitProgress;
 
@@ -299,56 +243,101 @@ const CaptionPage = ({ line, lineIdx, fps }) => {
 
   const absoluteTimeSec = pageStartSec + (frame / fps) - offset;
 
-  // Icon glow
   const iconDrawComplete = interpolate(frame, [theme.timing.iconDrawFrames, theme.timing.iconDrawFrames + 10], [0, 1], {
     extrapolateLeft: 'clamp', extrapolateRight: 'clamp',
   });
 
   if (totalOpacity < 0.01) return null;
 
+  // ── Build icon-text layout based on placement ──
+  const iconElement = (
+    <GlowIcon iconName={iconName} size={comp.iconSize} delay={2} />
+  );
+
+  const textElement = (
+    <div style={{
+      textAlign: comp.textAlign,
+      transform: `translate(${comp.textShift.x}px, ${comp.textShift.y}px)`,
+    }}>
+      {line.words.map((word, wi) => (
+        <SmoothWord
+          key={`${lineIdx}-${wi}`}
+          word={word}
+          absoluteTimeSec={absoluteTimeSec}
+          fps={fps}
+          fontSize={fontSize}
+          isEmphasis={wi === emphasisIdx}
+        />
+      ))}
+    </div>
+  );
+
+  // Render the composition based on icon placement
+  let innerLayout;
+
+  if (comp.iconPlacement === 'above') {
+    innerLayout = (
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20 }}>
+        {iconElement}
+        {textElement}
+      </div>
+    );
+  } else if (comp.iconPlacement === 'left') {
+    innerLayout = (
+      <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 28 }}>
+        {iconElement}
+        {textElement}
+      </div>
+    );
+  } else if (comp.iconPlacement === 'right') {
+    innerLayout = (
+      <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 28 }}>
+        {textElement}
+        {iconElement}
+      </div>
+    );
+  } else if (comp.iconPlacement === 'inline') {
+    innerLayout = (
+      <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+        {iconElement}
+        {textElement}
+      </div>
+    );
+  } else if (comp.iconPlacement === 'behind') {
+    innerLayout = (
+      <div style={{ position: 'relative' }}>
+        <div style={{
+          position: 'absolute', top: '50%', left: '50%',
+          transform: 'translate(-50%, -50%)',
+          opacity: 0.15,
+        }}>
+          {iconElement}
+        </div>
+        <div style={{ position: 'relative', zIndex: 2 }}>
+          {textElement}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <AbsoluteFill style={{ pointerEvents: 'none' }}>
       <IconLightCast
-        x={layout.lightCast.x}
-        y={layout.lightCast.y}
+        x={comp.lightCast.x}
+        y={comp.lightCast.y}
         intensity={iconDrawComplete * totalOpacity}
       />
 
       <div style={{
         position: 'absolute',
-        ...layout.position,
-        textAlign: layout.align,
-        maxWidth: 920,
+        ...comp.anchor,
+        maxWidth: 960,
         padding: '10px 24px',
         opacity: totalOpacity,
         transform: `translate(${totalX}px, ${totalY}px) scale(${totalScale})`,
         willChange: 'transform, opacity',
       }}>
-        {/* Icon */}
-        <div style={{
-          position: 'absolute',
-          ...layout.iconPos,
-          opacity: totalOpacity,
-        }}>
-          <GlowIcon iconName={iconName} size={52} delay={3} />
-        </div>
-
-        {/* Accent line */}
-        <AccentLine style={layout.accentStyle} opacity={totalOpacity} />
-
-        {/* Words with smooth highlighting */}
-        <div style={{ position: 'relative', zIndex: 2 }}>
-          {line.words.map((word, wi) => (
-            <SmoothWord
-              key={`${lineIdx}-${wi}`}
-              word={word}
-              absoluteTimeSec={absoluteTimeSec}
-              fps={fps}
-              fontSize={fontSize}
-              isEmphasis={wi === emphasisIdx}
-            />
-          ))}
-        </div>
+        {innerLayout}
       </div>
     </AbsoluteFill>
   );
