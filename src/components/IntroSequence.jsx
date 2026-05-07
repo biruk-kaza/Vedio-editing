@@ -1,13 +1,10 @@
 /**
- * EOTC Voice Studio — Premium Intro Sequence
+ * EOTC Voice Studio — Intro Sequence (Remotion Best Practice)
  * 
- * Uses same "Glow Reveal" easing as captions:
- * - Fade from black with cubic ease
- * - Cross scales in with spring + gold drop-shadow
- * - Title: glow reveal (scale 0.94→1.0) with animated letter-spacing
- * - Gold divider draws from center
- * - Amharic subtitle fades up
- * - Exit: everything fades + scales up slightly
+ * ✅ AbsoluteFill layout
+ * ✅ interpolate + Easing.bezier for all motion
+ * ✅ spring for organic pop
+ * ✅ Composing: single progress drives multiple properties
  */
 import React from 'react';
 import {
@@ -15,11 +12,12 @@ import {
   useVideoConfig,
   interpolate,
   spring,
+  AbsoluteFill,
   Easing,
 } from 'remotion';
 import { theme } from '../utils/theme.js';
 
-const EASE_REVEAL = Easing.bezier(0.16, 1, 0.3, 1);
+const EASE_ENTER = Easing.bezier(0.16, 1, 0.3, 1);
 
 export const IntroSequence = ({ title = 'EOTC Voice Studio' }) => {
   const frame = useCurrentFrame();
@@ -28,57 +26,70 @@ export const IntroSequence = ({ title = 'EOTC Voice Studio' }) => {
 
   if (frame > dur + 20) return null;
 
+  // Black overlay fade
   const bgFade = interpolate(frame, [0, 35], [1, 0], {
     extrapolateLeft: 'clamp', extrapolateRight: 'clamp',
     easing: Easing.out(Easing.cubic),
   });
 
-  const crossProg = spring({
+  // Cross: spring entrance
+  const crossSpring = spring({
     frame, fps,
     config: { damping: 14, mass: 1.0, stiffness: 90 },
     durationInFrames: 45,
   });
-  const crossScale = interpolate(crossProg, [0, 1], [0.2, 1]);
-  const crossOp = interpolate(crossProg, [0, 1], [0, 1]);
-  const crossRot = interpolate(crossProg, [0, 1], [-6, 0]);
+  const crossScale = interpolate(crossSpring, [0, 1], [0.2, 1]);
+  const crossOp = interpolate(crossSpring, [0, 1], [0, 1]);
 
-  const titleProg = interpolate(frame, [18, 48], [0, 1], {
-    extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: EASE_REVEAL,
+  // Title: composing progress → multiple properties
+  const titleProgress = interpolate(frame, [18, 48], [0, 1], {
+    extrapolateLeft: 'clamp', extrapolateRight: 'clamp',
+    easing: EASE_ENTER,
   });
-  const titleScale = interpolate(titleProg, [0, 1], [0.94, 1]);
-  const titleY = interpolate(titleProg, [0, 1], [20, 0]);
-  const titleSpacing = interpolate(titleProg, [0, 1], [14, 7]);
-  const titleGlow = interpolate(titleProg, [0, 0.5, 1], [0, 1, 0.4]);
+  const titleScale = interpolate(titleProgress, [0, 1], [0.95, 1]);
+  const titleY = interpolate(titleProgress, [0, 1], [18, 0]);
+  const titleSpacing = interpolate(titleProgress, [0, 1], [14, 7]);
+  const titleGlow = interpolate(titleProgress, [0, 0.5, 1], [0, 1, 0.4]);
 
+  // Divider width
   const divW = interpolate(frame, [28, 58], [0, 240], {
-    extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: EASE_REVEAL,
+    extrapolateLeft: 'clamp', extrapolateRight: 'clamp',
+    easing: EASE_ENTER,
   });
 
-  const subProg = interpolate(frame, [38, 63], [0, 1], {
-    extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: EASE_REVEAL,
+  // Subtitle
+  const subProgress = interpolate(frame, [38, 63], [0, 1], {
+    extrapolateLeft: 'clamp', extrapolateRight: 'clamp',
+    easing: EASE_ENTER,
   });
 
-  const fadeOut = interpolate(frame, [dur - 28, dur], [1, 0], {
+  // Exit: everything fades + scales slightly
+  const exitProgress = interpolate(frame, [dur - 28, dur], [0, 1], {
     extrapolateLeft: 'clamp', extrapolateRight: 'clamp',
     easing: Easing.in(Easing.cubic),
   });
-  const fadeScale = 1 + (1 - fadeOut) * 0.025;
+  const fadeOut = 1 - exitProgress;
+  const fadeScale = 1 + exitProgress * 0.025;
 
   return (
-    <div style={{
-      position: 'absolute', inset: 0, zIndex: 20,
-      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-      opacity: fadeOut, transform: `scale(${fadeScale})`,
-    }}>
+    <AbsoluteFill
+      style={{
+        zIndex: 20,
+        justifyContent: 'center', alignItems: 'center',
+        opacity: fadeOut, transform: `scale(${fadeScale})`,
+      }}
+    >
       <div style={{
         position: 'absolute', inset: 0, backgroundColor: '#000',
         opacity: bgFade, zIndex: 30,
       }} />
 
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 26, zIndex: 31 }}>
+      <div style={{
+        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 26, zIndex: 31,
+      }}>
         <svg viewBox="0 0 200 280" width={120} height={168} style={{
           opacity: crossOp,
-          transform: `scale(${crossScale}) rotate(${crossRot}deg)`,
+          transform: `scale(${crossScale})`,
           filter: `drop-shadow(0 0 18px ${theme.gold.glow})`,
         }}>
           <g fill={theme.gold.primary}>
@@ -93,7 +104,7 @@ export const IntroSequence = ({ title = 'EOTC Voice Studio' }) => {
         </svg>
 
         <div style={{
-          opacity: titleProg,
+          opacity: titleProgress,
           transform: `translateY(${titleY}px) scale(${titleScale})`,
           fontSize: 38, fontFamily: theme.fonts.display, fontWeight: 300,
           color: theme.text.primary, letterSpacing: titleSpacing,
@@ -106,12 +117,12 @@ export const IntroSequence = ({ title = 'EOTC Voice Studio' }) => {
         <div style={{
           width: divW, height: 1.5,
           background: `linear-gradient(90deg, transparent, ${theme.gold.primary}, transparent)`,
-          opacity: titleProg * 0.8,
+          opacity: titleProgress * 0.8,
         }} />
 
         <div style={{
-          opacity: subProg,
-          transform: `translateY(${interpolate(subProg, [0, 1], [10, 0])}px) scale(${interpolate(subProg, [0, 1], [0.94, 1])})`,
+          opacity: subProgress,
+          transform: `translateY(${interpolate(subProgress, [0, 1], [10, 0])}px) scale(${interpolate(subProgress, [0, 1], [0.95, 1])})`,
           fontSize: 21, fontFamily: theme.fonts.caption, fontWeight: 400,
           color: theme.gold.warm, letterSpacing: 3,
           textShadow: `0 0 12px ${theme.gold.subtle}`,
@@ -119,6 +130,6 @@ export const IntroSequence = ({ title = 'EOTC Voice Studio' }) => {
           ✦ የኢትዮጵያ ኦርቶዶክስ ተዋሕዶ ✦
         </div>
       </div>
-    </div>
+    </AbsoluteFill>
   );
 };

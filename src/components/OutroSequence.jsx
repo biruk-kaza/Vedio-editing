@@ -1,11 +1,10 @@
 /**
- * EOTC Voice Studio — Premium Outro
+ * EOTC Voice Studio — Outro Sequence (Remotion Best Practice)
  * 
- * Same visual language as intro:
- * - Glow reveal entrance with spring
- * - Gold pulsing cross
- * - Animated divider
- * - Clean fade to black
+ * ✅ AbsoluteFill layout
+ * ✅ spring for organic pop
+ * ✅ Composing: progress → properties
+ * ✅ Easing.in for fade-to-black
  */
 import React from 'react';
 import {
@@ -13,46 +12,47 @@ import {
   useVideoConfig,
   interpolate,
   spring,
+  AbsoluteFill,
   Easing,
 } from 'remotion';
 import { theme } from '../utils/theme.js';
 
-const EASE_REVEAL = Easing.bezier(0.16, 1, 0.3, 1);
+const EASE_ENTER = Easing.bezier(0.16, 1, 0.3, 1);
 
 export const OutroSequence = ({ outroStartFrame }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
-  const rel = frame - outroStartFrame;
+
+  // frame is local to this Sequence (starts at 0)
   const dur = theme.timing.outroDuration;
 
-  if (rel < -5 || rel > dur + 10) return null;
+  if (frame > dur + 10) return null;
 
-  const fadeIn = interpolate(rel, [0, 25], [0, 1], {
+  // Fade in background
+  const fadeIn = interpolate(frame, [0, 25], [0, 1], {
     extrapolateLeft: 'clamp', extrapolateRight: 'clamp',
-    easing: EASE_REVEAL,
+    easing: EASE_ENTER,
   });
 
+  // Content spring
   const sp = spring({
-    frame: Math.max(0, rel), fps,
+    frame, fps,
     config: { damping: 16, mass: 0.8, stiffness: 100 },
     durationInFrames: 35,
   });
+  const contentY = interpolate(sp, [0, 1], [30, 0]);
+  const contentScale = interpolate(sp, [0, 1], [0.95, 1]);
+  const divW = interpolate(sp, [0, 1], [0, 180]);
+  const glowStr = interpolate(Math.sin(frame * 0.06), [-1, 1], [0.5, 1.0]);
 
-  const toBlack = interpolate(rel, [dur - 25, dur], [0, 1], {
+  // Fade to black
+  const toBlack = interpolate(frame, [dur - 25, dur], [0, 1], {
     extrapolateLeft: 'clamp', extrapolateRight: 'clamp',
     easing: Easing.in(Easing.cubic),
   });
 
-  const contentY = interpolate(sp, [0, 1], [30, 0]);
-  const contentScale = interpolate(sp, [0, 1], [0.94, 1]);
-  const divW = interpolate(sp, [0, 1], [0, 180]);
-  const glowStr = interpolate(Math.sin(rel * 0.06), [-1, 1], [0.5, 1.0]);
-
   return (
-    <div style={{
-      position: 'absolute', inset: 0, zIndex: 20,
-      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-    }}>
+    <AbsoluteFill style={{ zIndex: 20, justifyContent: 'center', alignItems: 'center' }}>
       <div style={{
         position: 'absolute', inset: 0,
         backgroundColor: 'rgba(3,3,5,0.75)', opacity: fadeIn,
@@ -96,6 +96,6 @@ export const OutroSequence = ({ outroStartFrame }) => {
         position: 'absolute', inset: 0,
         backgroundColor: '#000', opacity: toBlack, zIndex: 2,
       }} />
-    </div>
+    </AbsoluteFill>
   );
 };

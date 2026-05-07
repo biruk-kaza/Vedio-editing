@@ -1,13 +1,15 @@
 /**
- * EOTC Voice Studio — Maximum Cinematic Motion Design
+ * EOTC Voice Studio — Remotion Best-Practice Main Composition
  * 
- * ═══ PARALLAX CAMERA ENGINE ═══
- * We separate the scene into 3 depth layers: Background, Midground, Foreground.
- * As the "virtual camera" pans and tilts (using continuous sine waves), 
- * the layers move at different speeds to create true 3D parallax depth.
- * 
- * ═══ AUDIO REACTIVITY ═══
- * Amplitude drives the main cross's scale and glow, pulsing with the voice.
+ * Follows @remotion/skills best practices:
+ * ✅ AbsoluteFill for layout
+ * ✅ Sequence for scene timing
+ * ✅ useWindowedAudioData for audio reactivity
+ * ✅ interpolate + Easing.bezier for all motion (NO CSS transitions)
+ * ✅ @remotion/google-fonts for font loading
+ * ✅ staticFile() for assets
+ * ✅ Camera zoom-out via interpolate over full duration
+ * ✅ Parallax depth layers
  */
 import React, { useEffect, useState } from 'react';
 import {
@@ -18,10 +20,11 @@ import {
   continueRender,
   delayRender,
   Sequence,
+  AbsoluteFill,
   interpolate,
   Easing,
 } from 'remotion';
-import { getAudioData, visualizeAudio } from '@remotion/media-utils';
+import { useWindowedAudioData, visualizeAudio } from '@remotion/media-utils';
 import { loadFont as loadEthiopic } from '@remotion/google-fonts/NotoSansEthiopic';
 import { AnimatedBackground } from './components/AnimatedBackground.jsx';
 import { ParticleField } from './components/ParticleField.jsx';
@@ -32,7 +35,7 @@ import { IntroSequence } from './components/IntroSequence.jsx';
 import { OutroSequence } from './components/OutroSequence.jsx';
 import { theme } from './utils/theme.js';
 
-// ── Bulletproof Amharic font ──
+// ── Font: @remotion/google-fonts blocks render until ready ──
 const { fontFamily: ethiopicFont } = loadEthiopic('normal', {
   weights: ['400', '500', '600', '700', '800'],
   subsets: ['ethiopic', 'latin'],
@@ -48,128 +51,110 @@ export const EOTCVideo = ({
   const frame = useCurrentFrame();
   const { fps, durationInFrames } = useVideoConfig();
 
-  // ── Font Loading ──
-  const [fontsHandle] = useState(() => delayRender('Loading fonts...'));
+  // ── Inter font (display text) ──
+  const [fontsHandle] = useState(() => delayRender('Loading Inter font...'));
   useEffect(() => {
-    const load = async () => {
-      try {
-        const link = document.createElement('link');
-        link.rel = 'stylesheet';
-        link.href = INTER_URL;
-        await new Promise((res) => { link.onload = res; link.onerror = res; document.head.appendChild(link); });
-        await document.fonts.ready;
-      } catch (e) { console.warn('Font load issue:', e); }
-      continueRender(fontsHandle);
-    };
-    load();
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = INTER_URL;
+    link.onload = () => { document.fonts.ready.then(() => continueRender(fontsHandle)); };
+    link.onerror = () => continueRender(fontsHandle);
+    document.head.appendChild(link);
   }, [fontsHandle]);
 
-  // ── Audio Reactivity ──
+  // ── Audio source ──
   const audioSrc = audioFileName ? staticFile(audioFileName) : null;
-  const [audioData, setAudioData] = useState(null);
-  const [audioHandle] = useState(() => audioSrc ? delayRender('Loading audio data...') : null);
 
-  useEffect(() => {
-    if (!audioSrc || !audioHandle) return;
-    getAudioData(audioSrc)
-      .then((data) => {
-        setAudioData(data);
-        continueRender(audioHandle);
-      })
-      .catch(() => continueRender(audioHandle));
-  }, [audioSrc, audioHandle]);
+  // ── Audio reactivity: useWindowedAudioData (best practice) ──
+  const audioResult = audioSrc
+    ? useWindowedAudioData({ src: audioSrc, frame, fps, windowInSeconds: 30 })
+    : null;
 
-  const introFrames = theme.timing.introDuration;
   let audioPulse = 0;
-  if (audioData && frame >= introFrames) {
+  const introFrames = theme.timing.introDuration;
+
+  if (audioResult?.audioData && frame >= introFrames) {
     try {
-      const visualization = visualizeAudio({
+      const frequencies = visualizeAudio({
         fps,
         frame: frame - introFrames,
-        audioData,
-        numberOfSamples: 16,
+        audioData: audioResult.audioData,
+        numberOfSamples: 32,
+        optimizeFor: 'speed',
+        dataOffsetInSeconds: audioResult.dataOffsetInSeconds,
       });
-      // Average bass/mid frequencies for a smooth pulse
-      audioPulse = (visualization[0] + visualization[1] + visualization[2] + visualization[3]) / 4;
+      // Bass-reactive: average low frequencies (skill best practice)
+      const lowFreqs = frequencies.slice(0, 8);
+      audioPulse = lowFreqs.reduce((sum, v) => sum + v, 0) / lowFreqs.length;
     } catch {
       audioPulse = 0;
     }
   }
 
-  // ════════════════════════════════════════════════════════════
-  // 📸 VIRTUAL PARALLAX CAMERA ENGINE
-  // Continually wanders through 3D space. Layers move at different
-  // rates to simulate a camera panning through a deep environment.
-  // ════════════════════════════════════════════════════════════
-  
-  // Base camera coordinates (continuous wandering)
-  const panX = Math.sin(frame * 0.0035) * 50; 
-  const panY = Math.cos(frame * 0.0025) * 35;
-  const rotZ = Math.sin(frame * 0.0015) * 2.5; // Dutch angle tilt
-  const cameraZ = Math.sin(frame * 0.004) * 0.06; // Breathing zoom
-  
-  // Intro push-in effect (smooth landing)
-  const introZoom = interpolate(frame, [0, introFrames], [0.15, 0], {
-    extrapolateLeft: 'clamp', extrapolateRight: 'clamp',
-    easing: Easing.out(Easing.cubic)
+  // ── CAMERA: slow zoom-out 1.05→1.0 with editorial ease-in-out ──
+  const cameraScale = interpolate(frame, [0, durationInFrames], [1.05, 1.0], {
+    extrapolateLeft: 'clamp',
+    extrapolateRight: 'clamp',
+    easing: Easing.bezier(0.45, 0, 0.55, 1), // editorial timing
   });
 
-  const baseScale = 1.05 + cameraZ + introZoom;
+  // ── PARALLAX: camera wander ──
+  const panX = Math.sin(frame * 0.003) * 35;
+  const panY = Math.cos(frame * 0.002) * 25;
+  const rotZ = Math.sin(frame * 0.0012) * 1.8;
 
-  // Layer multipliers (further away = moves less)
-  // Background
-  const bgTransform = `scale(${baseScale * 1.15}) translate3d(${-panX * 0.2}px, ${-panY * 0.2}px, 0) rotate(${-rotZ * 0.2}deg)`;
-  // Midground (Particles, Rays)
-  const midTransform = `scale(${baseScale * 1.08}) translate3d(${-panX * 0.5}px, ${-panY * 0.5}px, 0) rotate(${-rotZ * 0.5}deg)`;
-  // Foreground (Text, Cross)
-  const fgTransform = `scale(${baseScale}) translate3d(${-panX * 1.1}px, ${-panY * 1.1}px, 0) rotate(${-rotZ}deg)`;
+  // Layer multipliers (deeper = moves less)
+  const bgTransform = `scale(${cameraScale * 1.12}) translate3d(${-panX * 0.15}px, ${-panY * 0.15}px, 0) rotate(${-rotZ * 0.15}deg)`;
+  const midTransform = `scale(${cameraScale * 1.06}) translate3d(${-panX * 0.4}px, ${-panY * 0.4}px, 0) rotate(${-rotZ * 0.4}deg)`;
+  const fgTransform = `scale(${cameraScale}) translate3d(${-panX}px, ${-panY}px, 0) rotate(${-rotZ}deg)`;
 
-  const outroFrames = theme.timing.outroDuration;
-  const outroStartFrame = durationInFrames - outroFrames;
+  const outroStartFrame = durationInFrames - theme.timing.outroDuration;
 
   return (
-    <div
+    <AbsoluteFill
       style={{
-        width: theme.video.width,
-        height: theme.video.height,
-        position: 'relative',
-        overflow: 'hidden',
         backgroundColor: theme.bg.deep,
         fontFamily: ethiopicFont,
-        perspective: '1200px', // Establish 3D space
+        overflow: 'hidden',
       }}
     >
-      {/* ── LAYER 1: BACKGROUND (Deepest) ── */}
-      <div style={{ position: 'absolute', inset: 0, transform: bgTransform, willChange: 'transform' }}>
+      {/* ── BACKGROUND LAYER (deepest parallax) ── */}
+      <AbsoluteFill style={{ transform: bgTransform, willChange: 'transform' }}>
         <AnimatedBackground />
-      </div>
+      </AbsoluteFill>
 
-      {/* ── LAYER 2: MIDGROUND (Atmosphere) ── */}
-      <div style={{ position: 'absolute', inset: 0, transform: midTransform, willChange: 'transform' }}>
+      {/* ── MIDGROUND LAYER (atmosphere) ── */}
+      <AbsoluteFill style={{ transform: midTransform, willChange: 'transform' }}>
         <LightRays />
         <ParticleField />
-      </div>
+      </AbsoluteFill>
 
-      {/* ── LAYER 3: FOREGROUND (Subject) ── */}
-      <div style={{ position: 'absolute', inset: 0, transform: fgTransform, willChange: 'transform' }}>
+      {/* ── FOREGROUND LAYER (subject) ── */}
+      <AbsoluteFill style={{ transform: fgTransform, willChange: 'transform' }}>
+        {/* Audio-reactive cross */}
         <CrossWatermark audioPulse={audioPulse} />
-        
+
+        {/* Audio track in a Sequence (starts after intro) */}
         {audioSrc && (
-          <Sequence from={introFrames}>
+          <Sequence from={introFrames} layout="none">
             <Audio src={audioSrc} />
           </Sequence>
         )}
 
+        {/* Kinetic typography */}
         {words.length > 0 && (
           <CaptionOverlay words={words} introFrames={introFrames} />
         )}
-      </div>
+      </AbsoluteFill>
 
-      {/* ── UI OVERLAYS (Static to Screen) ── */}
-      <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
+      {/* ── UI OVERLAYS (fixed to screen, not affected by camera) ── */}
+      <Sequence durationInFrames={introFrames + 25} layout="none">
         <IntroSequence title={title} />
+      </Sequence>
+
+      <Sequence from={outroStartFrame} layout="none">
         <OutroSequence outroStartFrame={outroStartFrame} />
-      </div>
-    </div>
+      </Sequence>
+    </AbsoluteFill>
   );
 };
