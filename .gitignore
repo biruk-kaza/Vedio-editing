@@ -15,6 +15,6 @@ render-props.json
 public/audio.*
 public/video.*
 
-# Large video files (use GitHub Releases or artifacts)
+# Large video files (keep only small MOV for GitHub)
 input/tiktok_ready.mp4
-input/IMG_3444.MOV
+tiktok_ready_backup.mp4
