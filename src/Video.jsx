@@ -32,7 +32,6 @@ import { IntroSequence } from './components/IntroSequence.jsx';
 import { OutroSequence } from './components/OutroSequence.jsx';
 import { ProgressBar } from './components/ProgressBar.jsx';
 import { LightLeak } from './components/LightLeak.jsx';
-import { FloatingDust, AnamorphicLeaks, BreathingVignette } from './components/CinematicOverlays.jsx';
 import { theme } from './utils/theme.js';
 
 const { fontFamily: ethiopicFont } = loadEthiopic('normal', {
@@ -99,38 +98,15 @@ export const EOTCVideo = ({
   // MODE: VIDEO CAPTION OVERLAY
   // ═══════════════════════════════════
   if (isVideoMode) {
-    // ── Feature 3: Handheld Camera Shake ──
-    // Three layered sine waves at different frequencies
-    // create organic, non-repeating micro-motion
-    const shakeX = Math.sin(frame * 0.037) * 1.2
-                 + Math.sin(frame * 0.071 + 1.3) * 0.6
-                 + Math.sin(frame * 0.113 + 2.7) * 0.3;
-    const shakeY = Math.cos(frame * 0.041) * 0.9
-                 + Math.cos(frame * 0.083 + 0.7) * 0.5
-                 + Math.cos(frame * 0.127 + 1.9) * 0.25;
-    const shakeRotate = Math.sin(frame * 0.023 + 0.5) * 0.15;
-    const shakeScale = 1.008 + Math.sin(frame * 0.019) * 0.003;
-
     return (
       <AbsoluteFill style={{ backgroundColor: '#000', fontFamily: ethiopicFont, overflow: 'hidden' }}>
-        {/* Full-screen video with handheld shake */}
-        <div style={{
-          position: 'absolute', inset: '-1%',
-          transform: `translate(${shakeX}px, ${shakeY}px) rotate(${shakeRotate}deg) scale(${shakeScale})`,
-          willChange: 'transform',
-        }}>
-          <Video
-            src={videoSrc}
-            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-          />
-        </div>
+        {/* Full-screen clean video (no shake, no blur) */}
+        <Video
+          src={videoSrc}
+          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+        />
 
-        {/* Cinematic overlays */}
-        <BreathingVignette />
-        <FloatingDust />
-        <AnamorphicLeaks />
-
-        {/* Metallic captions with smart grouping */}
+        {/* Clean, professional bottom-third captions */}
         {words.length > 0 && (
           <VideoCaptionOverlay words={words} />
         )}

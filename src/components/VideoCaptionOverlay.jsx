@@ -1,20 +1,22 @@
 /**
- * EOTC Voice Studio — World-Class Video Caption Overlay
+ * EOTC Voice Studio — Broadcast-Grade Video Caption Overlay
  * 
- * ═══ FEATURE 2: METALLIC TEXT TEXTURE ═══
- * Active words get a moving gradient that simulates light
- * reflecting off gold leaf. The shine position shifts with
- * frame, creating a "living metal" effect.
+ * Design Philosophy: LESS IS MORE
  * 
- * ═══ FEATURE 4: SMART RHYTHMIC GROUPING ═══
- * Instead of dumb 4-word splits, we detect natural phrase
- * boundaries using time gaps between words. If there's a
- * gap > 0.6s between words, we split there. This keeps
- * "ዳዊት ዘመዳ ኢያቄም ወለዳ" together as one rhythmic unit.
+ * - NO glow effects (causes blur in renders)
+ * - NO metallic gradients (causes glitches)
+ * - NO gold underlines (looks cheap)
+ * - NO excessive scale animations (distracting)
  * 
- * ═══ SILKY SMOOTH WORD HIGHLIGHTING ═══
- * 6-frame ramp activeProgress (0→1→0). ALL properties
- * derived from this single continuous float.
+ * INSTEAD:
+ * - Crisp white text on semi-transparent dark backdrop
+ * - Smooth 8-frame highlight ramp (butter-smooth)
+ * - Active word: bright white, subtle 3% scale
+ * - Inactive: softly dimmed, zero visual noise
+ * - Professional entry/exit: simple opacity + 6px slide
+ * 
+ * This is the approach used by Netflix, Apple, and
+ * broadcast television. Clean. Readable. Perfect.
  */
 import React, { useMemo } from 'react';
 import {
@@ -28,40 +30,24 @@ import {
 } from 'remotion';
 import { theme } from '../utils/theme.js';
 
-const HIGHLIGHT_RAMP = 6;
+// Smooth 8-frame ramp = ~0.27s at 30fps — ultra-smooth transitions
+const HIGHLIGHT_RAMP = 8;
 
-/* ═══════════════════════════════════════════════
-   SMART RHYTHMIC GROUPING
-   
-   Rules:
-   1. If gap between words > 0.6s → new phrase
-   2. Max 5 words per phrase (readability)
-   3. Min 1 word per phrase
-   
-   Result: "ዳዊት ዘመዳ ኢያቄም ወለዳ" stays together
-   ═══════════════════════════════════════════════ */
-function groupWordsByRhythm(words, maxPerLine = 5) {
-  if (!words.length) return [];
-  const GAP_THRESHOLD = 0.6; // seconds
+// Group words into fixed-size lines
+function groupWordsIntoLines(words, max) {
   const lines = [];
-  let cur = [words[0]];
-
-  for (let i = 1; i < words.length; i++) {
-    const gap = words[i].start - words[i - 1].end;
-    const atMax = cur.length >= maxPerLine;
-
-    if (gap > GAP_THRESHOLD || atMax) {
+  let cur = [];
+  for (const w of words) {
+    cur.push(w);
+    if (cur.length >= max) {
       lines.push({
         words: [...cur],
         start: cur[0].start,
         end: cur[cur.length - 1].end,
       });
-      cur = [words[i]];
-    } else {
-      cur.push(words[i]);
+      cur = [];
     }
   }
-
   if (cur.length) {
     lines.push({
       words: [...cur],
@@ -69,165 +55,151 @@ function groupWordsByRhythm(words, maxPerLine = 5) {
       end: cur[cur.length - 1].end,
     });
   }
-
   return lines;
 }
 
 /* ═══════════════════════════════════════════════
-   METALLIC WORD — Gold leaf with moving specular shine
+   CLEAN WORD — Broadcast-grade highlighting
    
-   When active, the text gets a CSS gradient that moves
-   across the surface, simulating light on metal. The
-   gradient angle shifts with frame for a "living" feel.
+   The ONLY thing that changes is:
+   1. Opacity (0.45 → 1.0)
+   2. Scale (1.0 → 1.03)
+   3. Color temperature (cool gray → pure white)
+   
+   That's it. No glow. No blur. No gimmicks.
    ═══════════════════════════════════════════════ */
-const MetallicWord = ({ word, absoluteTimeSec, fps, globalFrame }) => {
+const CleanWord = ({ word, absoluteTimeSec, fps }) => {
   const rampSec = HIGHLIGHT_RAMP / fps;
-  const wordStart = word.start;
-  const wordEnd = word.end;
 
+  // Smooth envelope: ramps up before word, holds, ramps down after
   const rampIn = interpolate(
-    absoluteTimeSec, [wordStart - rampSec, wordStart], [0, 1],
+    absoluteTimeSec,
+    [word.start - rampSec, word.start],
+    [0, 1],
     { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }
   );
   const rampOut = interpolate(
-    absoluteTimeSec, [wordEnd, wordEnd + rampSec], [1, 0],
+    absoluteTimeSec,
+    [word.end, word.end + rampSec],
+    [1, 0],
     { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }
   );
-  const activeProgress = Math.min(rampIn, rampOut);
-  const isPast = absoluteTimeSec > wordEnd + rampSec;
-  const isFuture = absoluteTimeSec < wordStart - rampSec;
+  const progress = Math.min(rampIn, rampOut);
 
-  // ── Color: white when active, dim when not ──
-  const r = interpolate(activeProgress, [0, 1], [isPast ? 200 : isFuture ? 140 : 170, 255]);
-  const g = interpolate(activeProgress, [0, 1], [isPast ? 195 : isFuture ? 135 : 165, 255]);
-  const b = interpolate(activeProgress, [0, 1], [isPast ? 190 : isFuture ? 130 : 160, 255]);
-  const alpha = interpolate(activeProgress, [0, 1], [isPast ? 0.65 : isFuture ? 0.3 : 0.45, 1.0]);
+  const isPast = absoluteTimeSec > word.end + rampSec;
 
-  const scale = interpolate(activeProgress, [0, 1], [1.0, 1.12]);
-  const glowRadius = interpolate(activeProgress, [0, 1], [0, 24]);
-  const glowOpacity = interpolate(activeProgress, [0, 1], [0, 0.55]);
-  const underlineOp = interpolate(activeProgress, [0, 0.4, 1], [0, 0.2, 0.9]);
-  const fontWeight = Math.round(interpolate(activeProgress, [0, 1], [600, 800]));
-
-  // ── METALLIC GRADIENT ──
-  // The shine angle moves across the text surface over time
-  const shineAngle = interpolate(
-    Math.sin(globalFrame * 0.015 + wordStart * 2),
-    [-1, 1], [110, 160]
-  );
-  // Shine position shifts — the "hot spot" crawls across
-  const shinePosition = interpolate(
-    Math.sin(globalFrame * 0.02 + wordStart),
-    [-1, 1], [30, 70]
+  // Opacity: future words are dim, active is full, past is slightly bright
+  const opacity = interpolate(
+    progress,
+    [0, 1],
+    [isPast ? 0.65 : 0.4, 1.0]
   );
 
-  // When active, use metallic gradient. When not, solid color.
-  const useMetallic = activeProgress > 0.1;
-  const metallicGradient = useMetallic
-    ? `linear-gradient(${Math.round(shineAngle)}deg, 
-        rgba(${Math.round(r)},${Math.round(g)},${Math.round(b)},${alpha}) 0%, 
-        rgba(255,245,220,${alpha * (0.6 + activeProgress * 0.4)}) ${Math.round(shinePosition)}%, 
-        rgba(${Math.round(r)},${Math.round(g)},${Math.round(b)},${alpha}) 100%)`
-    : 'none';
+  // Scale: barely perceptible pop (3%) — enough to feel, not enough to distract
+  const scale = interpolate(progress, [0, 1], [1.0, 1.03]);
+
+  // Font weight: subtle thickening
+  const fontWeight = progress > 0.5 ? 700 : 600;
 
   return (
-    <span style={{
-      display: 'inline-block', position: 'relative',
-      color: useMetallic ? 'transparent' : `rgba(${Math.round(r)},${Math.round(g)},${Math.round(b)},${alpha})`,
-      background: useMetallic ? metallicGradient : 'none',
-      WebkitBackgroundClip: useMetallic ? 'text' : 'unset',
-      backgroundClip: useMetallic ? 'text' : 'unset',
-      fontSize: 92, fontFamily: theme.fonts.caption,
-      fontWeight,
-      transform: `scale(${scale})`,
-      textShadow: glowRadius > 0.5
-        ? `0 0 ${glowRadius}px rgba(212,175,55,${glowOpacity}), 0 0 ${glowRadius * 2.5}px rgba(212,175,55,${glowOpacity * 0.4}), 0 4px 16px rgba(0,0,0,0.85)`
-        : '0 4px 16px rgba(0,0,0,0.85)',
-      WebkitTextStroke: useMetallic ? '0px transparent' : '3px rgba(0,0,0,0.5)',
-      paintOrder: 'stroke fill',
-      marginRight: 18,
-      lineHeight: 1.5,
-      willChange: 'transform, color, background',
-      WebkitFontSmoothing: 'antialiased',
-    }}>
+    <span
+      style={{
+        display: 'inline-block',
+        color: `rgba(255, 255, 255, ${opacity})`,
+        fontSize: 76,
+        fontFamily: theme.fonts.caption,
+        fontWeight,
+        transform: `scale(${scale})`,
+        transformOrigin: 'center bottom',
+        // Clean, tight drop shadow for separation — NO blur glow
+        textShadow: '0 2px 6px rgba(0,0,0,0.9), 0 0 2px rgba(0,0,0,0.7)',
+        WebkitTextStroke: '1.5px rgba(0,0,0,0.35)',
+        paintOrder: 'stroke fill',
+        marginRight: 16,
+        lineHeight: 1.45,
+        transition: 'font-weight 0.15s',
+        WebkitFontSmoothing: 'antialiased',
+        MozOsxFontSmoothing: 'grayscale',
+      }}
+    >
       {word.word}
-      {/* Gold underline */}
-      {underlineOp > 0.05 && (
-        <div style={{
-          position: 'absolute', bottom: -5,
-          left: '3%', right: '3%', height: 4,
-          borderRadius: 2,
-          background: `linear-gradient(90deg, transparent, ${theme.gold.metallic}, transparent)`,
-          opacity: underlineOp,
-          boxShadow: `0 0 12px rgba(212,175,55,${underlineOp * 0.6})`,
-        }} />
-      )}
     </span>
   );
 };
 
 /* ═══════════════════════════════════════════════
-   CAPTION LINE — Bottom-third, clean, centered
+   CAPTION LINE — Bottom-third with backdrop
    ═══════════════════════════════════════════════ */
 const CaptionLine = ({ line, fps }) => {
   const frame = useCurrentFrame();
-  const { fps: configFps, durationInFrames } = useVideoConfig();
-  const pageStartSec = line.start;
+  const { fps: configFps } = useVideoConfig();
   const pageDurFrames = Math.ceil((line.end - line.start) * fps);
 
-  // Global frame for metallic gradient sync
-  const globalFrame = Math.floor(pageStartSec * fps) + frame;
-
-  // Entrance: gentle spring
+  // Entry: gentle spring-in (no bounce)
   const enterSpring = spring({
-    frame, fps: configFps,
-    config: { damping: 16, stiffness: 140, mass: 0.4 },
-    durationInFrames: 14,
+    frame,
+    fps: configFps,
+    config: { damping: 22, stiffness: 120, mass: 0.5 },
+    durationInFrames: 12,
   });
-  const entryScale = interpolate(enterSpring, [0, 1], [0.92, 1.0]);
-  const entryY = interpolate(enterSpring, [0, 1], [14, 0]);
-  const entryOpacity = interpolate(frame, [0, 6], [0, 1], {
-    extrapolateLeft: 'clamp', extrapolateRight: 'clamp',
-  });
+  const entryOpacity = interpolate(enterSpring, [0, 1], [0, 1]);
+  const entryY = interpolate(enterSpring, [0, 1], [6, 0]);
 
-  // Exit
-  const exitStart = pageDurFrames + 2;
-  const exitProgress = interpolate(frame, [exitStart, exitStart + 10], [0, 1], {
-    extrapolateLeft: 'clamp', extrapolateRight: 'clamp',
-    easing: Easing.bezier(0.4, 0, 0.2, 1),
-  });
+  // Exit: smooth ease-out fade
+  const exitStart = pageDurFrames + 4;
+  const exitProgress = interpolate(
+    frame,
+    [exitStart, exitStart + 8],
+    [0, 1],
+    {
+      extrapolateLeft: 'clamp',
+      extrapolateRight: 'clamp',
+      easing: Easing.bezier(0.4, 0, 0.2, 1),
+    }
+  );
   const exitOpacity = 1 - exitProgress;
-  const exitY = exitProgress * 10;
+  const exitY = exitProgress * 6;
 
   const totalOpacity = entryOpacity * exitOpacity;
   if (totalOpacity < 0.01) return null;
 
-  const absoluteTimeSec = pageStartSec + (frame / fps);
+  const absoluteTimeSec = line.start + frame / fps;
 
   return (
     <AbsoluteFill style={{ pointerEvents: 'none' }}>
-      {/* Dark gradient for readability */}
-      <div style={{
-        position: 'absolute', bottom: 0, left: 0, right: 0, height: '32%',
-        background: 'linear-gradient(0deg, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.35) 50%, transparent 100%)',
-        opacity: totalOpacity,
-      }} />
+      {/* Gradient backdrop — ensures readability on any video */}
+      <div
+        style={{
+          position: 'absolute',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          height: '28%',
+          background:
+            'linear-gradient(0deg, rgba(0,0,0,0.65) 0%, rgba(0,0,0,0.25) 60%, transparent 100%)',
+          opacity: totalOpacity,
+        }}
+      />
 
-      {/* Caption container */}
-      <div style={{
-        position: 'absolute', bottom: '14%', left: '3%', right: '3%',
-        textAlign: 'center',
-        opacity: totalOpacity,
-        transform: `translateY(${entryY + exitY}px) scale(${entryScale})`,
-        willChange: 'transform, opacity',
-      }}>
+      {/* Text container — centered, bottom 15% */}
+      <div
+        style={{
+          position: 'absolute',
+          bottom: '12%',
+          left: '4%',
+          right: '4%',
+          textAlign: 'center',
+          opacity: totalOpacity,
+          transform: `translateY(${entryY + exitY}px)`,
+          willChange: 'transform, opacity',
+        }}
+      >
         {line.words.map((word, wi) => (
-          <MetallicWord
+          <CleanWord
             key={`${line.start}-${wi}`}
             word={word}
             absoluteTimeSec={absoluteTimeSec}
             fps={fps}
-            globalFrame={globalFrame}
           />
         ))}
       </div>
@@ -236,22 +208,21 @@ const CaptionLine = ({ line, fps }) => {
 };
 
 /* ═══════════════════════════════════════════════
-   MAIN CAPTION OVERLAY — Video mode
+   MAIN EXPORT — Video Caption Overlay
    ═══════════════════════════════════════════════ */
-export const VideoCaptionOverlay = ({ words = [], segments = [] }) => {
+export const VideoCaptionOverlay = ({ words = [] }) => {
   const { fps } = useVideoConfig();
 
-  // SMART grouping: use rhythm-aware splitting
   const lines = useMemo(
-    () => groupWordsByRhythm(words, 5),
+    () => groupWordsIntoLines(words, 4),
     [words]
   );
 
   return (
     <AbsoluteFill style={{ zIndex: 10, pointerEvents: 'none' }}>
       {lines.map((line, i) => {
-        const startFrame = Math.floor(line.start * fps) - 4;
-        const endFrame = Math.floor(line.end * fps) + 14;
+        const startFrame = Math.floor(line.start * fps) - 3;
+        const endFrame = Math.floor(line.end * fps) + 12;
         const duration = Math.max(1, endFrame - startFrame);
 
         return (
