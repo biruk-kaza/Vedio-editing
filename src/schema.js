@@ -19,6 +19,12 @@ export const eotcVideoSchema = z.object({
   // ── Audio filename (in public/ directory) ──
   audioFileName: z.string().default(''),
 
+  // ── Video filename (in public/ directory, for caption mode) ──
+  videoFileName: z.string().default(''),
+
+  // ── Mode: 'kinetic' (dark bg) or 'caption' (video overlay) ──
+  mode: z.enum(['kinetic', 'caption']).default('kinetic'),
+
   // ── Display title for intro sequence ──
   title: z.string().default('EOTC Voice Studio'),
 

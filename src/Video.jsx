@@ -1,38 +1,17 @@
 /**
- * EOTC Voice Studio — Production-Grade Main Composition
+ * EOTC Voice Studio — Dual-Mode Composition
  * 
- * ═══ PRODUCTION CHECKLIST ═══
- * ✅ Zod-validated props (schema.js)
- * ✅ AbsoluteFill for layout (no raw divs)
- * ✅ Every section in <Sequence> with dynamic duration
- * ✅ interpolate + Easing.bezier for ALL motion (ZERO CSS transitions)
- * ✅ spring() for entry animations
- * ✅ @remotion/google-fonts for Amharic
- * ✅ useWindowedAudioData for audio reactivity
- * ✅ Parallax camera with 3 depth layers
- * ✅ Light leak overlays at scene transitions
- * ✅ Progress bar tracking frame/durationInFrames
- * ✅ Grain + vignette overlays
- * ✅ Audio plays for full duration (loops if needed)
+ * MODE 1: "kinetic" — Dark background + full kinetic typography
+ * MODE 2: "caption" — Video background + clean bottom captions
  * 
- * ═══ SEQUENCE ARCHITECTURE ═══
- * Seq 1: Background       [0 → end]           continuous
- * Seq 2: Atmosphere        [0 → end]           particles + rays
- * Seq 3: Intro             [0 → introDur+25]   fade from black
- * Seq 4: Light Leak #1     [introDur-10 → +25] transition flare
- * Seq 5: Audio             [introDur → end]     voiceover
- * Seq 6: Cross             [0 → end]           audio-reactive
- * Seq 7: Captions          [introDur → outroStart] kinetic typography
- * Seq 8: Light Leak #2     [outroStart-10 → +25] transition flare
- * Seq 9: Outro             [outroStart → end]   fade to black
- * Seq 10: Progress Bar     [0 → end]           frame tracker
- * Seq 11: Grain/Vignette   [0 → end]           cinematic overlay
+ * Mode is auto-detected from props.mode (set by prepare-render.js)
  */
 import React, { useEffect, useState } from 'react';
 import {
   useCurrentFrame,
   useVideoConfig,
   Audio,
+  Video,
   staticFile,
   continueRender,
   delayRender,
@@ -48,13 +27,13 @@ import { ParticleField } from './components/ParticleField.jsx';
 import { LightRays } from './components/LightRays.jsx';
 import { CrossWatermark } from './components/CrossWatermark.jsx';
 import { CaptionOverlay } from './components/CaptionOverlay.jsx';
+import { VideoCaptionOverlay } from './components/VideoCaptionOverlay.jsx';
 import { IntroSequence } from './components/IntroSequence.jsx';
 import { OutroSequence } from './components/OutroSequence.jsx';
 import { ProgressBar } from './components/ProgressBar.jsx';
 import { LightLeak } from './components/LightLeak.jsx';
 import { theme } from './utils/theme.js';
 
-// ── Bulletproof Amharic font ──
 const { fontFamily: ethiopicFont } = loadEthiopic('normal', {
   weights: ['400', '500', '600', '700', '800'],
   subsets: ['ethiopic', 'latin'],
@@ -65,11 +44,15 @@ const INTER_URL = 'https://fonts.googleapis.com/css2?family=Inter:wght@300;400;5
 export const EOTCVideo = ({
   words = [],
   audioFileName = '',
+  videoFileName = '',
+  mode = 'kinetic',
   title = 'EOTC Voice Studio',
   showProgressBar = true,
 }) => {
   const frame = useCurrentFrame();
   const { fps, durationInFrames } = useVideoConfig();
+
+  const isVideoMode = mode === 'caption' && videoFileName;
 
   // ── Inter font ──
   const [fontsHandle] = useState(() => delayRender('Loading Inter...'));
@@ -82,41 +65,63 @@ export const EOTCVideo = ({
     document.head.appendChild(link);
   }, [fontsHandle]);
 
-  // ── Audio source ──
+  // ── Media sources ──
   const audioSrc = audioFileName ? staticFile(audioFileName) : null;
+  const videoSrc = videoFileName ? staticFile(videoFileName) : null;
 
-  // ── Audio reactivity: getAudioData (supports m4a/mp3/wav/ogg) ──
+  // ── Audio reactivity (kinetic mode only) ──
   const [audioData, setAudioData] = useState(null);
-  const [audioHandle] = useState(() => audioSrc ? delayRender('Loading audio data...') : null);
+  const [audioHandle] = useState(() => audioSrc && !isVideoMode ? delayRender('Loading audio...') : null);
 
   useEffect(() => {
-    if (!audioSrc || !audioHandle) return;
+    if (!audioSrc || !audioHandle || isVideoMode) return;
     getAudioData(audioSrc)
       .then((data) => { setAudioData(data); continueRender(audioHandle); })
-      .catch(() => continueRender(audioHandle)); // Don't block render if audio analysis fails
-  }, [audioSrc, audioHandle]);
+      .catch(() => continueRender(audioHandle));
+  }, [audioSrc, audioHandle, isVideoMode]);
 
   let audioPulse = 0;
-  const introFrames = theme.timing.introDuration;
+  const introFrames = isVideoMode ? 0 : theme.timing.introDuration;
 
-  if (audioData && frame >= introFrames) {
+  if (audioData && !isVideoMode && frame >= introFrames) {
     try {
       const frequencies = visualizeAudio({
-        fps,
-        frame: frame - introFrames,
-        audioData,
-        numberOfSamples: 32,
-        optimizeFor: 'speed',
+        fps, frame: frame - introFrames, audioData,
+        numberOfSamples: 32, optimizeFor: 'speed',
       });
       const lowFreqs = frequencies.slice(0, 8);
       audioPulse = lowFreqs.reduce((s, v) => s + v, 0) / lowFreqs.length;
-    } catch {
-      audioPulse = 0;
-    }
+    } catch { audioPulse = 0; }
   }
 
-  // ── CAMERA: Z-space push with cinematic easing ──
-  // Slow push forward through Z-axis (50mm lens feel)
+  // ═══════════════════════════════════
+  // MODE: VIDEO CAPTION OVERLAY
+  // ═══════════════════════════════════
+  if (isVideoMode) {
+    return (
+      <AbsoluteFill style={{ backgroundColor: '#000', fontFamily: ethiopicFont }}>
+        {/* Full-screen video */}
+        <Video
+          src={videoSrc}
+          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+        />
+
+        {/* Clean bottom-third captions with smooth highlighting */}
+        {words.length > 0 && (
+          <VideoCaptionOverlay words={words} />
+        )}
+
+        {/* Subtle progress bar */}
+        {showProgressBar && (
+          <ProgressBar introFrames={0} outroFrames={0} />
+        )}
+      </AbsoluteFill>
+    );
+  }
+
+  // ═══════════════════════════════════
+  // MODE: KINETIC TYPOGRAPHY (dark bg)
+  // ═══════════════════════════════════
   const cameraZ = interpolate(frame, [0, durationInFrames], [0, 80], {
     extrapolateLeft: 'clamp', extrapolateRight: 'clamp',
     easing: Easing.bezier(0.45, 0, 0.55, 1),
@@ -126,33 +131,27 @@ export const EOTCVideo = ({
     easing: Easing.bezier(0.45, 0, 0.55, 1),
   });
 
-  // ── PARALLAX: organic camera drift ──
   const panX = Math.sin(frame * 0.003) * 28;
   const panY = Math.cos(frame * 0.002) * 18;
   const rotZ = Math.sin(frame * 0.0012) * 1.2;
 
-  // Z-space separation: deeper layers move less (real parallax)
   const bgTransform = `scale(${cameraScale * 1.12}) translate3d(${-panX * 0.1}px, ${-panY * 0.1}px, ${-cameraZ * 0.3}px) rotate(${-rotZ * 0.1}deg)`;
   const midTransform = `scale(${cameraScale * 1.06}) translate3d(${-panX * 0.3}px, ${-panY * 0.3}px, ${-cameraZ * 0.15}px) rotate(${-rotZ * 0.3}deg)`;
   const fgTransform = `scale(${cameraScale}) translate3d(${-panX * 0.75}px, ${-panY * 0.75}px, 0px) rotate(${-rotZ * 0.75}deg)`;
 
-  // ── Scene timing (dynamic) ──
   const outroFrames = theme.timing.outroDuration;
   const outroStartFrame = durationInFrames - outroFrames;
-  const mainContentDuration = outroStartFrame - introFrames;
   const lightLeakDuration = 25;
 
   return (
     <AbsoluteFill style={{ backgroundColor: theme.bg.deep, fontFamily: ethiopicFont, overflow: 'hidden', perspective: '1400px' }}>
 
-      {/* ═══ Seq 1: BACKGROUND (full duration, deepest parallax) ═══ */}
       <Sequence durationInFrames={durationInFrames}>
         <AbsoluteFill style={{ transform: bgTransform, willChange: 'transform' }}>
           <AnimatedBackground />
         </AbsoluteFill>
       </Sequence>
 
-      {/* ═══ Seq 2: ATMOSPHERE (full duration, mid parallax) ═══ */}
       <Sequence durationInFrames={durationInFrames}>
         <AbsoluteFill style={{ transform: midTransform, willChange: 'transform' }}>
           <LightRays />
@@ -160,31 +159,26 @@ export const EOTCVideo = ({
         </AbsoluteFill>
       </Sequence>
 
-      {/* ═══ Seq 3: FOREGROUND CROSS (full duration, audio-reactive) ═══ */}
       <Sequence durationInFrames={durationInFrames}>
         <AbsoluteFill style={{ transform: fgTransform, willChange: 'transform' }}>
           <CrossWatermark audioPulse={audioPulse} />
         </AbsoluteFill>
       </Sequence>
 
-      {/* ═══ Seq 4: INTRO SEQUENCE ═══ */}
       <Sequence durationInFrames={introFrames + 25} layout="none">
         <IntroSequence title={title} />
       </Sequence>
 
-      {/* ═══ Seq 5: LIGHT LEAK #1 (intro→main transition) ═══ */}
       <Sequence from={Math.max(0, introFrames - 10)} durationInFrames={lightLeakDuration} layout="none">
         <LightLeak startFrame={0} durationFrames={lightLeakDuration} />
       </Sequence>
 
-      {/* ═══ Seq 6: AUDIO (starts after intro, plays for full duration) ═══ */}
       {audioSrc && (
         <Sequence from={introFrames} layout="none">
           <Audio src={audioSrc} />
         </Sequence>
       )}
 
-      {/* ═══ Seq 7: KINETIC TYPOGRAPHY (main content) ═══ */}
       {words.length > 0 && (
         <Sequence durationInFrames={durationInFrames} layout="none">
           <AbsoluteFill style={{ transform: fgTransform, willChange: 'transform' }}>
@@ -193,26 +187,21 @@ export const EOTCVideo = ({
         </Sequence>
       )}
 
-      {/* ═══ Seq 8: LIGHT LEAK #2 (main→outro transition) ═══ */}
       <Sequence from={Math.max(0, outroStartFrame - 10)} durationInFrames={lightLeakDuration} layout="none">
         <LightLeak startFrame={0} durationFrames={lightLeakDuration} />
       </Sequence>
 
-      {/* ═══ Seq 9: OUTRO SEQUENCE ═══ */}
       <Sequence from={outroStartFrame} layout="none">
         <OutroSequence outroStartFrame={0} />
       </Sequence>
 
-      {/* ═══ Seq 10: GRAIN + VIGNETTE (full duration, cinematic overlay) ═══ */}
       <Sequence durationInFrames={durationInFrames}>
         <AbsoluteFill style={{ pointerEvents: 'none', zIndex: 15 }}>
-          {/* Film grain */}
           <div style={{
-            position: 'absolute', inset: 0, opacity: 0.02,
-            backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`,
-            backgroundSize: '128px 128px',
+            position: 'absolute', inset: 0, opacity: theme.bg.grainOpacity,
+            backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E")`,
+            backgroundSize: theme.bg.grainScale, mixBlendMode: 'overlay',
           }} />
-          {/* Vignette */}
           <div style={{
             position: 'absolute', inset: 0,
             background: `radial-gradient(ellipse 55% 42% at 50% 50%, transparent 10%, rgba(0,0,0,${interpolate(Math.sin(frame * 0.008), [-1, 1], [0.42, 0.52])}) 100%)`,
@@ -220,13 +209,11 @@ export const EOTCVideo = ({
         </AbsoluteFill>
       </Sequence>
 
-      {/* ═══ Seq 11: PROGRESS BAR (full duration) ═══ */}
       {showProgressBar && (
         <Sequence durationInFrames={durationInFrames} layout="none">
           <ProgressBar introFrames={introFrames} outroFrames={outroFrames} />
         </Sequence>
       )}
-
     </AbsoluteFill>
   );
 };

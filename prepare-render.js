@@ -68,15 +68,21 @@ function loadCaptions() {
   throw new Error('No caption files found! Run transcription (Phase 1) first.');
 }
 
-// ── Find Audio File ──
-function findAudioFile() {
+// ── Find Media Files ──
+function findMediaFiles() {
   const inputDir = path.join(__dirname, 'input');
-  const extensions = ['.mp3', '.ogg', '.wav', '.m4a', '.flac', '.aac'];
+  const audioExts = ['.mp3', '.ogg', '.wav', '.m4a', '.flac', '.aac'];
+  const videoExts = ['.mov', '.mp4', '.webm', '.avi', '.mkv'];
   if (!fs.existsSync(inputDir)) throw new Error('input/ directory not found');
   const files = fs.readdirSync(inputDir);
-  const audioFile = files.find(f => extensions.includes(path.extname(f).toLowerCase()));
-  if (!audioFile) throw new Error('No audio file found in input/ directory');
-  return path.join(inputDir, audioFile);
+
+  const videoFile = files.find(f => videoExts.includes(path.extname(f).toLowerCase()));
+  const audioFile = files.find(f => audioExts.includes(path.extname(f).toLowerCase()));
+
+  return {
+    videoPath: videoFile ? path.join(inputDir, videoFile) : null,
+    audioPath: audioFile ? path.join(inputDir, audioFile) : null,
+  };
 }
 
 // ── Main ──
@@ -92,24 +98,47 @@ function main() {
   // 1. Load captions
   const { words, totalDuration } = loadCaptions();
 
-  // 2. Find and copy audio to public/
-  const audioPath = findAudioFile();
-  const ext = path.extname(audioPath);
-  const audioFileName = `audio${ext}`;
+  // 2. Find media files
+  const { videoPath, audioPath } = findMediaFiles();
   const publicDir = path.join(__dirname, 'public');
   if (!fs.existsSync(publicDir)) fs.mkdirSync(publicDir, { recursive: true });
-  fs.copyFileSync(audioPath, path.join(publicDir, audioFileName));
-  console.log(`🎵 Audio: ${audioPath} → public/${audioFileName}`);
+
+  let videoFileName = '';
+  let audioFileName = '';
+  let mode = 'kinetic'; // Default: text-only dark background
+
+  // Video mode: copy video to public/ (video contains its own audio)
+  if (videoPath) {
+    const vExt = path.extname(videoPath);
+    videoFileName = `video${vExt}`;
+    fs.copyFileSync(videoPath, path.join(publicDir, videoFileName));
+    console.log(`🎬 Video: ${videoPath} → public/${videoFileName}`);
+    mode = 'caption'; // Video overlay = caption mode
+  }
+
+  // Audio mode: copy audio to public/
+  if (audioPath && !videoPath) {
+    const aExt = path.extname(audioPath);
+    audioFileName = `audio${aExt}`;
+    fs.copyFileSync(audioPath, path.join(publicDir, audioFileName));
+    console.log(`🎵 Audio: ${audioPath} → public/${audioFileName}`);
+  }
+
+  if (!videoPath && !audioPath) {
+    throw new Error('No media file found in input/. Add a video (.mov/.mp4) or audio (.mp3/.m4a) file.');
+  }
 
   // 3. Calculate duration
-  const introDurationSec = 3;
-  const outroDurationSec = 3;
+  const introDurationSec = mode === 'caption' ? 0 : 3.5;
+  const outroDurationSec = mode === 'caption' ? 0 : 3;
   const totalSeconds = introDurationSec + totalDuration + outroDurationSec + 0.5;
 
   // 4. Write render-props.json
   const props = {
     words,
     audioFileName,
+    videoFileName,
+    mode, // 'kinetic' or 'caption'
     title: args.title,
     totalDuration,
     totalSeconds,
@@ -120,9 +149,10 @@ function main() {
 
   console.log('');
   console.log(`📊 Render Parameters:`);
+  console.log(`   🎯 Mode: ${mode === 'caption' ? '📹 Video Caption Overlay' : '✨ Kinetic Typography'}`);
   console.log(`   📝 Words: ${words.length}`);
-  console.log(`   ⏱️  Audio: ${totalDuration.toFixed(1)}s`);
-  console.log(`   ⏱️  Total: ${totalSeconds.toFixed(1)}s (intro + audio + outro)`);
+  console.log(`   ⏱️  Media: ${totalDuration.toFixed(1)}s`);
+  console.log(`   ⏱️  Total: ${totalSeconds.toFixed(1)}s`);
   console.log(`   🎬 Title: "${args.title}"`);
   console.log(`   📁 Props: ${propsPath}`);
   console.log('');
