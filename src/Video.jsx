@@ -41,7 +41,7 @@ import {
   interpolate,
   Easing,
 } from 'remotion';
-import { useWindowedAudioData, visualizeAudio } from '@remotion/media-utils';
+import { getAudioData, visualizeAudio } from '@remotion/media-utils';
 import { loadFont as loadEthiopic } from '@remotion/google-fonts/NotoSansEthiopic';
 import { AnimatedBackground } from './components/AnimatedBackground.jsx';
 import { ParticleField } from './components/ParticleField.jsx';
@@ -85,23 +85,28 @@ export const EOTCVideo = ({
   // ── Audio source ──
   const audioSrc = audioFileName ? staticFile(audioFileName) : null;
 
-  // ── Audio reactivity: useWindowedAudioData ──
-  const audioResult = audioSrc
-    ? useWindowedAudioData({ src: audioSrc, frame, fps, windowInSeconds: 30 })
-    : null;
+  // ── Audio reactivity: getAudioData (supports m4a/mp3/wav/ogg) ──
+  const [audioData, setAudioData] = useState(null);
+  const [audioHandle] = useState(() => audioSrc ? delayRender('Loading audio data...') : null);
+
+  useEffect(() => {
+    if (!audioSrc || !audioHandle) return;
+    getAudioData(audioSrc)
+      .then((data) => { setAudioData(data); continueRender(audioHandle); })
+      .catch(() => continueRender(audioHandle)); // Don't block render if audio analysis fails
+  }, [audioSrc, audioHandle]);
 
   let audioPulse = 0;
   const introFrames = theme.timing.introDuration;
 
-  if (audioResult?.audioData && frame >= introFrames) {
+  if (audioData && frame >= introFrames) {
     try {
       const frequencies = visualizeAudio({
         fps,
         frame: frame - introFrames,
-        audioData: audioResult.audioData,
+        audioData,
         numberOfSamples: 32,
         optimizeFor: 'speed',
-        dataOffsetInSeconds: audioResult.dataOffsetInSeconds,
       });
       const lowFreqs = frequencies.slice(0, 8);
       audioPulse = lowFreqs.reduce((s, v) => s + v, 0) / lowFreqs.length;
