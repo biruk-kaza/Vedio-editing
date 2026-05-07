@@ -115,20 +115,26 @@ export const EOTCVideo = ({
     }
   }
 
-  // ── CAMERA: editorial zoom-out ──
-  const cameraScale = interpolate(frame, [0, durationInFrames], [1.05, 1.0], {
+  // ── CAMERA: Z-space push with cinematic easing ──
+  // Slow push forward through Z-axis (50mm lens feel)
+  const cameraZ = interpolate(frame, [0, durationInFrames], [0, 80], {
+    extrapolateLeft: 'clamp', extrapolateRight: 'clamp',
+    easing: Easing.bezier(0.45, 0, 0.55, 1),
+  });
+  const cameraScale = interpolate(frame, [0, durationInFrames], [1.06, 1.0], {
     extrapolateLeft: 'clamp', extrapolateRight: 'clamp',
     easing: Easing.bezier(0.45, 0, 0.55, 1),
   });
 
-  // ── PARALLAX: gentle camera drift ──
-  const panX = Math.sin(frame * 0.003) * 30;
-  const panY = Math.cos(frame * 0.002) * 20;
-  const rotZ = Math.sin(frame * 0.0012) * 1.5;
+  // ── PARALLAX: organic camera drift ──
+  const panX = Math.sin(frame * 0.003) * 28;
+  const panY = Math.cos(frame * 0.002) * 18;
+  const rotZ = Math.sin(frame * 0.0012) * 1.2;
 
-  const bgTransform = `scale(${cameraScale * 1.1}) translate3d(${-panX * 0.12}px, ${-panY * 0.12}px, 0) rotate(${-rotZ * 0.12}deg)`;
-  const midTransform = `scale(${cameraScale * 1.05}) translate3d(${-panX * 0.35}px, ${-panY * 0.35}px, 0) rotate(${-rotZ * 0.35}deg)`;
-  const fgTransform = `scale(${cameraScale}) translate3d(${-panX * 0.8}px, ${-panY * 0.8}px, 0) rotate(${-rotZ * 0.8}deg)`;
+  // Z-space separation: deeper layers move less (real parallax)
+  const bgTransform = `scale(${cameraScale * 1.12}) translate3d(${-panX * 0.1}px, ${-panY * 0.1}px, ${-cameraZ * 0.3}px) rotate(${-rotZ * 0.1}deg)`;
+  const midTransform = `scale(${cameraScale * 1.06}) translate3d(${-panX * 0.3}px, ${-panY * 0.3}px, ${-cameraZ * 0.15}px) rotate(${-rotZ * 0.3}deg)`;
+  const fgTransform = `scale(${cameraScale}) translate3d(${-panX * 0.75}px, ${-panY * 0.75}px, 0px) rotate(${-rotZ * 0.75}deg)`;
 
   // ── Scene timing (dynamic) ──
   const outroFrames = theme.timing.outroDuration;
@@ -137,7 +143,7 @@ export const EOTCVideo = ({
   const lightLeakDuration = 25;
 
   return (
-    <AbsoluteFill style={{ backgroundColor: theme.bg.deep, fontFamily: ethiopicFont, overflow: 'hidden' }}>
+    <AbsoluteFill style={{ backgroundColor: theme.bg.deep, fontFamily: ethiopicFont, overflow: 'hidden', perspective: '1400px' }}>
 
       {/* ═══ Seq 1: BACKGROUND (full duration, deepest parallax) ═══ */}
       <Sequence durationInFrames={durationInFrames}>

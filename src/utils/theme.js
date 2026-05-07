@@ -1,59 +1,65 @@
 /**
- * EOTC Voice Studio — Ultra-Premium Design System
+ * EOTC Voice Studio — Cinematic Art Direction System
  * 
- * ═══ NATE HERK–LEVEL VISUAL DIRECTION ═══
- * Theme: Clean, punchy, modern. Deep black canvas.
- * Gold: Bright champagne highlights — snappy, not gradual.
- * Motion: Punchy spring overshoots. Tight 10-frame transitions.
- * Typography: Bold, centered, massive. No clutter.
+ * ═══ VISUAL IDENTITY ═══
+ * Canvas: Textured charcoal #0A0A0A (not flat black)
+ * Gold: Rich metallic #D4AF37 with specular highlights
+ * Grain: 35mm film grain, 2.5% opacity
+ * Vignette: Organic, asymmetric, breathing
  * 
- * ═══ EASING CURVES ═══
- * punchyEnter:  bezier(0.34, 1.56, 0.64, 1)  — overshoot spring pop
- * crispEnter:   bezier(0.16, 1, 0.3, 1)       — fast deceleration
- * smoothExit:   bezier(0.4, 0, 0.2, 1)        — smooth departure
+ * ═══ MOTION PHILOSOPHY ═══
+ * Easing: Explosive 0→80% in first 10 frames,
+ *         then exaggerated buttery ease-in for seconds
+ * Curve:  bezier(0.05, 0.95, 0.15, 1.0)  — "cinematic snap"
+ * Spring: damping:10, stiffness:280, mass:0.25 — punchy overshoot
  */
 
 export const theme = {
-  // ── Deep Black Canvas ──
+  // ── Textured Charcoal Canvas (NOT flat black) ──
   bg: {
-    deep: '#030305',
-    gradient1: '#0c0618',
-    gradient2: '#060d1a',
-    gradient3: '#0e0608',
-    gradient4: '#080614',
+    deep: '#0A0A0A',
+    gradient1: '#0e0820',
+    gradient2: '#08101e',
+    gradient3: '#120810',
+    gradient4: '#0a0818',
+    // Film grain
+    grainOpacity: 0.025,
+    grainScale: '96px',
   },
 
-  // ── Champagne Gold ──
+  // ── Rich Metallic Gold with Specular ──
   gold: {
-    primary: '#c9a96e',
-    bright: '#e8d5a3',
-    warm: '#b8944f',
-    hotGlow: '#f0dea0',
-    metallic: 'linear-gradient(135deg, #c9a96e 0%, #e8d5a3 50%, #c9a96e 100%)',
-    glow: 'rgba(232, 213, 163, 0.35)',
-    glowStrong: 'rgba(232, 213, 163, 0.60)',
-    subtle: 'rgba(201, 169, 110, 0.08)',
+    primary: '#D4AF37',
+    bright: '#F0D875',
+    warm: '#C49B2A',
+    hotGlow: '#FFE88A',
+    // Specular highlight (bright white-gold flash)
+    specular: '#FFF8E1',
+    // Metallic gradient with specular band
+    metallic: 'linear-gradient(135deg, #C49B2A 0%, #D4AF37 25%, #F0D875 48%, #FFF8E1 52%, #F0D875 55%, #D4AF37 75%, #C49B2A 100%)',
+    // Glow levels
+    glow: 'rgba(212, 175, 55, 0.35)',
+    glowStrong: 'rgba(240, 216, 117, 0.55)',
+    glowSoft: 'rgba(212, 175, 55, 0.12)',
+    subtle: 'rgba(212, 175, 55, 0.06)',
   },
 
-  // ── Text Colors — Punchy contrast ──
+  // ── Text Colors — Cinema-grade contrast ──
   text: {
-    // Active word: bright white pop (not gold — Nate Herk style)
-    active: '#ffffff',
-    // Surrounding words: clean visible white
-    past: 'rgba(220, 215, 205, 0.65)',
-    // Future words: muted but readable
-    future: 'rgba(180, 175, 165, 0.32)',
-    // Intro/outro
-    primary: '#f0ebe0',
+    active: '#FFFFFF',
+    past: 'rgba(220, 215, 205, 0.60)',
+    future: 'rgba(160, 155, 145, 0.28)',
+    primary: '#F5F0E0',
+    brand: '#D4AF37',
   },
 
   // ── Particle FX ──
   fx: {
-    particle: 'rgba(201, 169, 110, 0.45)',
-    particleBright: 'rgba(232, 213, 163, 0.70)',
-    particleWhite: 'rgba(255, 255, 255, 0.25)',
-    ray: 'rgba(201, 169, 110, 0.02)',
-    rayBright: 'rgba(232, 213, 163, 0.04)',
+    particle: 'rgba(212, 175, 55, 0.40)',
+    particleBright: 'rgba(240, 216, 117, 0.65)',
+    particleWhite: 'rgba(255, 255, 255, 0.18)',
+    ray: 'rgba(212, 175, 55, 0.015)',
+    rayBright: 'rgba(240, 216, 117, 0.03)',
   },
 
   // ── Typography ──
@@ -64,18 +70,17 @@ export const theme = {
 
   // ── Caption Layout ──
   caption: {
-    fontSize: 72,        // Bigger = punchier
-    fontWeight: 800,     // Extra bold
-    lineHeight: 1.35,
+    fontSize: 74,
+    fontWeight: 800,
+    lineHeight: 1.32,
     maxWidth: 920,
-    wordGap: 20,
+    wordGap: 22,
     wordsPerLine: 3,
-    // Active word pop scale
-    highlightScale: 1.08,
-    // Glow radius for active word
-    glowRadius: 18,
-    // Text stroke (for readability on dark bg)
-    stroke: { width: 2, color: 'rgba(0, 0, 0, 0.5)' },
+    highlightScale: 1.10,
+    glowRadius: 16,
+    stroke: { width: 1.5, color: 'rgba(0, 0, 0, 0.45)' },
+    // Continuous enlargement: 100% → 103% over phrase duration
+    breatheScale: 0.03,
   },
 
   // ── Video ──
@@ -85,19 +90,22 @@ export const theme = {
     fps: 30,
   },
 
-  // ── Timing — Snappy, punchy ──
+  // ── Motion — Cinematic Snap ──
   timing: {
-    introDuration: 90,    // 3 seconds
-    outroDuration: 90,    // 3 seconds
-    // Entry: fast spring pop (10 frames = 0.33s)
+    introDuration: 105,   // 3.5 seconds (longer for typographic transition)
+    outroDuration: 90,
     revealFrames: 10,
-    // Exit: quick departure (8 frames)
     exitFrames: 8,
-    // Word stagger: tight (1 frame apart = rapid-fire)
     wordStagger: 1,
-    // Caption offset
     captionOffsetSec: 0.10,
-    // Word spring: punchy overshoot
-    wordSpring: { damping: 12, mass: 0.3, stiffness: 220 },
+    // Punchy overshoot spring
+    wordSpring: { damping: 10, stiffness: 280, mass: 0.25 },
+    // Icon draw-on duration
+    iconDrawFrames: 20,
   },
+
+  // ── Liturgical Icon Set ──
+  icons: [
+    'cross', 'book', 'dove', 'candle', 'church', 'prayer', 'sun', 'bell',
+  ],
 };
