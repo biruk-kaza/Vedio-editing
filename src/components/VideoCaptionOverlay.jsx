@@ -1,22 +1,14 @@
 /**
  * EOTC Voice Studio — Broadcast-Grade Video Caption Overlay
  * 
- * Design Philosophy: LESS IS MORE
+ * Design: CENTERED, CLEAN, PROFESSIONAL
  * 
- * - NO glow effects (causes blur in renders)
- * - NO metallic gradients (causes glitches)
- * - NO gold underlines (looks cheap)
- * - NO excessive scale animations (distracting)
- * 
- * INSTEAD:
- * - Crisp white text on semi-transparent dark backdrop
- * - Smooth 8-frame highlight ramp (butter-smooth)
- * - Active word: bright white, subtle 3% scale
- * - Inactive: softly dimmed, zero visual noise
- * - Professional entry/exit: simple opacity + 6px slide
- * 
- * This is the approach used by Netflix, Apple, and
- * broadcast television. Clean. Readable. Perfect.
+ * - Flexbox-centered text (never drifts to side)
+ * - Semi-transparent backdrop pill for guaranteed readability
+ * - 8-frame butter-smooth highlight ramp
+ * - Active word: bright white, 3% scale
+ * - Clean entry/exit: opacity + 6px slide
+ * - NO glow, NO blur, NO gimmicks
  */
 import React, { useMemo } from 'react';
 import {
@@ -30,10 +22,8 @@ import {
 } from 'remotion';
 import { theme } from '../utils/theme.js';
 
-// Smooth 8-frame ramp = ~0.27s at 30fps — ultra-smooth transitions
 const HIGHLIGHT_RAMP = 8;
 
-// Group words into fixed-size lines
 function groupWordsIntoLines(words, max) {
   const lines = [];
   let cur = [];
@@ -59,19 +49,11 @@ function groupWordsIntoLines(words, max) {
 }
 
 /* ═══════════════════════════════════════════════
-   CLEAN WORD — Broadcast-grade highlighting
-   
-   The ONLY thing that changes is:
-   1. Opacity (0.45 → 1.0)
-   2. Scale (1.0 → 1.03)
-   3. Color temperature (cool gray → pure white)
-   
-   That's it. No glow. No blur. No gimmicks.
+   CLEAN WORD — Pure, crisp, zero artifacts
    ═══════════════════════════════════════════════ */
 const CleanWord = ({ word, absoluteTimeSec, fps }) => {
   const rampSec = HIGHLIGHT_RAMP / fps;
 
-  // Smooth envelope: ramps up before word, holds, ramps down after
   const rampIn = interpolate(
     absoluteTimeSec,
     [word.start - rampSec, word.start],
@@ -85,20 +67,13 @@ const CleanWord = ({ word, absoluteTimeSec, fps }) => {
     { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }
   );
   const progress = Math.min(rampIn, rampOut);
-
   const isPast = absoluteTimeSec > word.end + rampSec;
 
-  // Opacity: future words are dim, active is full, past is slightly bright
   const opacity = interpolate(
-    progress,
-    [0, 1],
-    [isPast ? 0.65 : 0.4, 1.0]
+    progress, [0, 1],
+    [isPast ? 0.6 : 0.35, 1.0]
   );
-
-  // Scale: barely perceptible pop (3%) — enough to feel, not enough to distract
-  const scale = interpolate(progress, [0, 1], [1.0, 1.03]);
-
-  // Font weight: subtle thickening
+  const scale = interpolate(progress, [0, 1], [1.0, 1.04]);
   const fontWeight = progress > 0.5 ? 700 : 600;
 
   return (
@@ -106,18 +81,16 @@ const CleanWord = ({ word, absoluteTimeSec, fps }) => {
       style={{
         display: 'inline-block',
         color: `rgba(255, 255, 255, ${opacity})`,
-        fontSize: 76,
+        fontSize: 78,
         fontFamily: theme.fonts.caption,
         fontWeight,
         transform: `scale(${scale})`,
         transformOrigin: 'center bottom',
-        // Clean, tight drop shadow for separation — NO blur glow
-        textShadow: '0 2px 6px rgba(0,0,0,0.9), 0 0 2px rgba(0,0,0,0.7)',
-        WebkitTextStroke: '1.5px rgba(0,0,0,0.35)',
+        textShadow: '0 2px 8px rgba(0,0,0,0.95), 0 0 3px rgba(0,0,0,0.8)',
+        WebkitTextStroke: '1.5px rgba(0,0,0,0.4)',
         paintOrder: 'stroke fill',
-        marginRight: 16,
-        lineHeight: 1.45,
-        transition: 'font-weight 0.15s',
+        margin: '0 8px',
+        lineHeight: 1.4,
         WebkitFontSmoothing: 'antialiased',
         MozOsxFontSmoothing: 'grayscale',
       }}
@@ -128,14 +101,14 @@ const CleanWord = ({ word, absoluteTimeSec, fps }) => {
 };
 
 /* ═══════════════════════════════════════════════
-   CAPTION LINE — Bottom-third with backdrop
+   CAPTION LINE — Perfectly centered with backdrop
    ═══════════════════════════════════════════════ */
 const CaptionLine = ({ line, fps }) => {
   const frame = useCurrentFrame();
   const { fps: configFps } = useVideoConfig();
   const pageDurFrames = Math.ceil((line.end - line.start) * fps);
 
-  // Entry: gentle spring-in (no bounce)
+  // Entry: smooth spring (no bounce)
   const enterSpring = spring({
     frame,
     fps: configFps,
@@ -143,9 +116,9 @@ const CaptionLine = ({ line, fps }) => {
     durationInFrames: 12,
   });
   const entryOpacity = interpolate(enterSpring, [0, 1], [0, 1]);
-  const entryY = interpolate(enterSpring, [0, 1], [6, 0]);
+  const entryY = interpolate(enterSpring, [0, 1], [8, 0]);
 
-  // Exit: smooth ease-out fade
+  // Exit: smooth fade
   const exitStart = pageDurFrames + 4;
   const exitProgress = interpolate(
     frame,
@@ -167,48 +140,68 @@ const CaptionLine = ({ line, fps }) => {
 
   return (
     <AbsoluteFill style={{ pointerEvents: 'none' }}>
-      {/* Gradient backdrop — ensures readability on any video */}
+      {/* Gradient backdrop for readability */}
       <div
         style={{
           position: 'absolute',
           bottom: 0,
           left: 0,
           right: 0,
-          height: '28%',
+          height: '30%',
           background:
-            'linear-gradient(0deg, rgba(0,0,0,0.65) 0%, rgba(0,0,0,0.25) 60%, transparent 100%)',
+            'linear-gradient(0deg, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.3) 55%, transparent 100%)',
           opacity: totalOpacity,
         }}
       />
 
-      {/* Text container — centered, bottom 15% */}
+      {/* ── PERFECT CENTER CONTAINER ──
+          Uses flexbox to guarantee horizontal + vertical centering.
+          The text never drifts to the side. */}
       <div
         style={{
           position: 'absolute',
-          bottom: '12%',
-          left: '4%',
-          right: '4%',
-          textAlign: 'center',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          height: '25%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
           opacity: totalOpacity,
           transform: `translateY(${entryY + exitY}px)`,
           willChange: 'transform, opacity',
         }}
       >
-        {line.words.map((word, wi) => (
-          <CleanWord
-            key={`${line.start}-${wi}`}
-            word={word}
-            absoluteTimeSec={absoluteTimeSec}
-            fps={fps}
-          />
-        ))}
+        {/* Semi-transparent backdrop pill */}
+        <div
+          style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '16px 28px',
+            borderRadius: 16,
+            background: 'rgba(0, 0, 0, 0.35)',
+            backdropFilter: 'blur(2px)',
+            maxWidth: '92%',
+          }}
+        >
+          {line.words.map((word, wi) => (
+            <CleanWord
+              key={`${line.start}-${wi}`}
+              word={word}
+              absoluteTimeSec={absoluteTimeSec}
+              fps={fps}
+            />
+          ))}
+        </div>
       </div>
     </AbsoluteFill>
   );
 };
 
 /* ═══════════════════════════════════════════════
-   MAIN EXPORT — Video Caption Overlay
+   MAIN EXPORT
    ═══════════════════════════════════════════════ */
 export const VideoCaptionOverlay = ({ words = [] }) => {
   const { fps } = useVideoConfig();
