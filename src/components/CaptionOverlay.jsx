@@ -1,13 +1,21 @@
 /**
- * EOTC Voice Studio — Cinema-Grade Kinetic Typography Engine
+ * EOTC Voice Studio — Cinema-Grade Kinetic Typography
  * 
- * ═══ ART DIRECTION ═══
- * 1. VARIETY — 7 layout presets, no two phrases the same
- * 2. ICONS — Path-trace draw-on SVG icons per phrase
- * 3. INTERACTIVE LIGHTING — Icon glow casts onto text
- * 4. CONTINUOUS ENLARGEMENT — Text scales 100%→103% over duration
- * 5. CINEMATIC SNAP — Explosive 0→80% in 10 frames, buttery ease-in
- * 6. SPECULAR GOLD — Text glow with metallic sheen
+ * ═══ THE "CENTER ZONE VARIETY" PRINCIPLE ═══
+ * Eyes stay focused on ONE comfort zone (center 35-55% of screen)
+ * but every phrase FEELS different through:
+ * 
+ *   → Font size changes (1 word = massive, 3 words = normal)
+ *   → Horizontal shift (slight left/center/slight right — NOT edges)
+ *   → Slide direction (up/left/right/down — still varied)
+ *   → Emphasis word sizing (longest word 1.2× bigger)
+ *   → Accent line style (top/bottom/left bar/none)
+ * 
+ * Result: VARIETY + COMFORT. Eyes never chase the text.
+ * 
+ * ═══ SMOOTH WORD HIGHLIGHTING ═══
+ * activeProgress float (0→1→0) over 4-frame ramp.
+ * ALL properties derived via interpolate().
  */
 import React, { useMemo } from 'react';
 import {
@@ -22,89 +30,74 @@ import {
 import { theme } from '../utils/theme.js';
 import { GlowIcon, IconLightCast, getIconForLine } from './IconLibrary.jsx';
 
-// ── Cinematic Snap Easing ──
-// Explosive 0→80% in first 10 frames, buttery ease-in for rest
-const EASE_CINEMATIC = Easing.bezier(0.05, 0.95, 0.15, 1.0);
 const EASE_EXIT = Easing.bezier(0.4, 0, 0.2, 1);
+const HIGHLIGHT_RAMP = 4; // frames for smooth highlight transition
 
-// ═══ LAYOUT PRESETS ═══
+// ═══ CENTER-ZONE LAYOUTS ═══
+// All stay in the vertical center band (38-52%)
+// Horizontal variety is subtle (±8% from center)
 const LAYOUTS = [
   {
-    name: 'CENTER_HERO',
-    position: { top: '42%', left: '50%', transform: 'translate(-50%, -50%)' },
+    name: 'CENTER',
+    position: { top: '45%', left: '50%', transform: 'translate(-50%, -50%)' },
     align: 'center',
-    sizeMultiplier: 1.35,
-    slideFrom: { x: 0, y: 45 },
-    slideExit: { x: 0, y: -28 },
-    iconPos: { top: '-80px', left: '50%', transform: 'translateX(-50%)' },
-    lightCast: { x: '50%', y: '35%' },
-  },
-  {
-    name: 'LEFT_SLIDE',
-    position: { top: '40%', left: '8%', transform: 'translateY(-50%)' },
-    align: 'left',
-    sizeMultiplier: 1.0,
-    slideFrom: { x: -90, y: 0 },
-    slideExit: { x: -50, y: 0 },
-    iconPos: { top: '-70px', left: '0' },
-    lightCast: { x: '15%', y: '35%' },
-  },
-  {
-    name: 'RIGHT_SLIDE',
-    position: { top: '45%', right: '8%', transform: 'translateY(-50%)' },
-    align: 'right',
-    sizeMultiplier: 1.0,
-    slideFrom: { x: 90, y: 0 },
-    slideExit: { x: 50, y: 0 },
-    iconPos: { top: '-70px', right: '0' },
-    lightCast: { x: '85%', y: '40%' },
-  },
-  {
-    name: 'BOTTOM_POP',
-    position: { bottom: '22%', left: '50%', transform: 'translateX(-50%)' },
-    align: 'center',
-    sizeMultiplier: 1.15,
-    slideFrom: { x: 0, y: 55 },
-    slideExit: { x: 0, y: 35 },
+    sizeMultiplier: 1.3,
+    slideFrom: { x: 0, y: 40 },
+    slideExit: { x: 0, y: -20 },
     iconPos: { top: '-75px', left: '50%', transform: 'translateX(-50%)' },
-    lightCast: { x: '50%', y: '68%' },
+    lightCast: { x: '50%', y: '38%' },
+    accentStyle: 'center',
   },
   {
-    name: 'CENTER_COMPACT',
-    position: { top: '38%', left: '50%', transform: 'translate(-50%, -50%)' },
+    name: 'SLIGHT_LEFT',
+    position: { top: '43%', left: '42%', transform: 'translate(-50%, -50%)' },
     align: 'center',
-    sizeMultiplier: 0.88,
-    slideFrom: { x: 65, y: 12 },
-    slideExit: { x: -35, y: -12 },
-    iconPos: { top: '-65px', left: '50%', transform: 'translateX(-50%)' },
-    lightCast: { x: '55%', y: '32%' },
+    sizeMultiplier: 1.05,
+    slideFrom: { x: -50, y: 10 },
+    slideExit: { x: -25, y: -10 },
+    iconPos: { top: '-70px', left: '50%', transform: 'translateX(-50%)' },
+    lightCast: { x: '42%', y: '36%' },
+    accentStyle: 'left',
   },
   {
-    name: 'TOP_WIDE',
-    position: { top: '26%', left: '50%', transform: 'translate(-50%, -50%)' },
+    name: 'SLIGHT_RIGHT',
+    position: { top: '47%', left: '58%', transform: 'translate(-50%, -50%)' },
     align: 'center',
-    sizeMultiplier: 1.2,
-    slideFrom: { x: 0, y: -45 },
-    slideExit: { x: 0, y: -35 },
+    sizeMultiplier: 1.05,
+    slideFrom: { x: 50, y: 10 },
+    slideExit: { x: 25, y: -10 },
+    iconPos: { top: '-70px', left: '50%', transform: 'translateX(-50%)' },
+    lightCast: { x: '58%', y: '40%' },
+    accentStyle: 'right',
+  },
+  {
+    name: 'CENTER_HIGH',
+    position: { top: '40%', left: '50%', transform: 'translate(-50%, -50%)' },
+    align: 'center',
+    sizeMultiplier: 1.18,
+    slideFrom: { x: 0, y: -35 },
+    slideExit: { x: 0, y: -25 },
     iconPos: { top: '-72px', left: '50%', transform: 'translateX(-50%)' },
-    lightCast: { x: '50%', y: '20%' },
+    lightCast: { x: '50%', y: '33%' },
+    accentStyle: 'center',
   },
   {
-    name: 'LEFT_LOW',
-    position: { bottom: '28%', left: '10%' },
-    align: 'left',
-    sizeMultiplier: 1.08,
-    slideFrom: { x: -75, y: 22 },
-    slideExit: { x: -40, y: -18 },
-    iconPos: { top: '-70px', left: '0' },
-    lightCast: { x: '18%', y: '62%' },
+    name: 'CENTER_LOW',
+    position: { top: '50%', left: '50%', transform: 'translate(-50%, -50%)' },
+    align: 'center',
+    sizeMultiplier: 1.12,
+    slideFrom: { x: 0, y: 45 },
+    slideExit: { x: 0, y: 20 },
+    iconPos: { top: '-70px', left: '50%', transform: 'translateX(-50%)' },
+    lightCast: { x: '50%', y: '43%' },
+    accentStyle: 'bottom',
   },
 ];
 
 function getDynamicFontSize(wordCount, multiplier) {
   const base = theme.caption.fontSize;
-  if (wordCount === 1) return Math.round(base * 1.55 * multiplier);
-  if (wordCount === 2) return Math.round(base * 1.22 * multiplier);
+  if (wordCount === 1) return Math.round(base * 1.5 * multiplier);
+  if (wordCount === 2) return Math.round(base * 1.2 * multiplier);
   return Math.round(base * multiplier);
 }
 
@@ -125,66 +118,73 @@ function groupWordsIntoLines(words, max) {
 }
 
 /* ═══════════════════════════════════════════════
-   ANIMATED WORD — Cinematic snap + specular highlight
+   SMOOTH WORD — Continuous activeProgress (0→1→0)
+   Highlight flows like liquid across words
    ═══════════════════════════════════════════════ */
-const AnimatedWord = ({ word, isActive, isPast, fps, idx, pageFrame, fontSize, isEmphasis }) => {
-  const staggerDelay = idx * theme.timing.wordStagger;
-  const local = Math.max(0, pageFrame - staggerDelay);
+const SmoothWord = ({ word, absoluteTimeSec, fps, fontSize, isEmphasis }) => {
+  const rampSec = HIGHLIGHT_RAMP / fps;
 
-  // Cinematic snap spring
-  const enterSpring = spring({
-    frame: local, fps,
-    config: theme.timing.wordSpring,
-    durationInFrames: 16,
-  });
+  // Smooth ramp up (4 frames before word.start → 1.0 at word.start)
+  const rampIn = interpolate(
+    absoluteTimeSec,
+    [word.start - rampSec, word.start],
+    [0, 1],
+    { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }
+  );
 
-  const scale = interpolate(enterSpring, [0, 1], [0.78, 1.0]);
-  const opacity = interpolate(local, [0, 4], [0, 1], {
-    extrapolateLeft: 'clamp', extrapolateRight: 'clamp',
-  });
+  // Smooth ramp down (1.0 at word.end → 0 after 4 frames)
+  const rampOut = interpolate(
+    absoluteTimeSec,
+    [word.end, word.end + rampSec],
+    [1, 0],
+    { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }
+  );
 
-  // Active word: instant white POP with specular
-  const activeScale = isActive ? theme.caption.highlightScale : 1;
+  const activeProgress = Math.min(rampIn, rampOut);
+  const isPast = absoluteTimeSec > word.end + rampSec;
+  const isFuture = absoluteTimeSec < word.start - rampSec;
+
+  // ── ALL properties from activeProgress ──
+  const r = interpolate(activeProgress, [0, 1], [isPast ? 190 : isFuture ? 130 : 160, 255]);
+  const g = interpolate(activeProgress, [0, 1], [isPast ? 185 : isFuture ? 125 : 155, 255]);
+  const b = interpolate(activeProgress, [0, 1], [isPast ? 180 : isFuture ? 120 : 150, 255]);
+  const alpha = interpolate(activeProgress, [0, 1], [isPast ? 0.58 : isFuture ? 0.28 : 0.45, 1.0]);
+
+  const scale = interpolate(activeProgress, [0, 1], [1.0, theme.caption.highlightScale]);
+  const glowRadius = interpolate(activeProgress, [0, 1], [0, theme.caption.glowRadius]);
+  const glowOpacity = interpolate(activeProgress, [0, 1], [0, 0.45]);
+  const underlineOp = interpolate(activeProgress, [0, 0.4, 1], [0, 0.2, 0.85]);
+  const fontWeight = Math.round(interpolate(activeProgress, [0, 1], [600, theme.caption.fontWeight]));
+
   const emphasisScale = isEmphasis ? 1.18 : 1;
-
-  const color = isActive ? theme.text.active
-    : isPast ? theme.text.past
-    : theme.text.future;
-
-  const fontWeight = isActive ? theme.caption.fontWeight
-    : isPast ? theme.caption.fontWeight - 100
-    : theme.caption.fontWeight - 200;
-
-  // Specular gold glow for active word
-  const shadow = isActive
-    ? `0 0 ${theme.caption.glowRadius}px ${theme.gold.glow}, 0 0 ${theme.caption.glowRadius * 2.5}px ${theme.gold.glowSoft}, 0 4px 18px rgba(0,0,0,0.6)`
-    : '0 3px 12px rgba(0,0,0,0.5)';
-
-  const wordFontSize = isEmphasis ? fontSize * 1.22 : fontSize;
+  const wordFontSize = isEmphasis ? fontSize * 1.2 : fontSize;
 
   return (
     <span style={{
-      display: 'inline-block', position: 'relative', color,
+      display: 'inline-block', position: 'relative',
+      color: `rgba(${Math.round(r)}, ${Math.round(g)}, ${Math.round(b)}, ${alpha})`,
       fontSize: wordFontSize, fontFamily: theme.fonts.caption,
-      fontWeight, opacity,
-      transform: `scale(${scale * activeScale * emphasisScale})`,
-      textShadow: shadow,
+      fontWeight,
+      transform: `scale(${scale * emphasisScale})`,
+      textShadow: glowRadius > 0.5
+        ? `0 0 ${glowRadius}px rgba(212,175,55,${glowOpacity}), 0 0 ${glowRadius * 2.5}px ${theme.gold.glowSoft}, 0 4px 14px rgba(0,0,0,0.6)`
+        : '0 3px 10px rgba(0,0,0,0.5)',
       WebkitTextStroke: `${theme.caption.stroke.width}px ${theme.caption.stroke.color}`,
       paintOrder: 'stroke fill',
       marginRight: theme.caption.wordGap,
       lineHeight: theme.caption.lineHeight,
-      willChange: 'transform, opacity',
+      willChange: 'transform, color',
       WebkitFontSmoothing: 'antialiased',
     }}>
       {word.word}
-      {/* Active underline — metallic gold bar */}
-      {isActive && (
+      {underlineOp > 0.05 && (
         <div style={{
-          position: 'absolute', bottom: -6,
-          left: '2%', right: '2%', height: 3.5,
+          position: 'absolute', bottom: -5,
+          left: '3%', right: '3%', height: 3.5,
           borderRadius: 2,
           background: theme.gold.metallic,
-          boxShadow: `0 0 14px ${theme.gold.glow}, 0 2px 6px ${theme.gold.glowSoft}`,
+          opacity: underlineOp,
+          boxShadow: `0 0 12px rgba(212,175,55,${underlineOp * 0.5})`,
         }} />
       )}
     </span>
@@ -192,8 +192,57 @@ const AnimatedWord = ({ word, isActive, isPast, fps, idx, pageFrame, fontSize, i
 };
 
 /* ═══════════════════════════════════════════════
-   CAPTION PAGE — Unique layout + icon + light cast
-   + continuous enlargement
+   ACCENT LINE — varies per layout
+   ═══════════════════════════════════════════════ */
+const AccentLine = ({ style, opacity }) => {
+  if (style === 'center') {
+    return (
+      <div style={{
+        position: 'absolute', bottom: -18, left: '12%', right: '12%',
+        height: 2, borderRadius: 1,
+        background: `linear-gradient(90deg, transparent, ${theme.gold.primary}, transparent)`,
+        opacity: opacity * 0.45,
+        boxShadow: `0 0 10px ${theme.gold.glow}`,
+      }} />
+    );
+  }
+  if (style === 'left') {
+    return (
+      <div style={{
+        position: 'absolute', left: 0, bottom: -14,
+        width: 50, height: 2.5, borderRadius: 1,
+        backgroundColor: theme.gold.primary,
+        opacity: opacity * 0.5,
+        boxShadow: `0 0 8px ${theme.gold.glow}`,
+      }} />
+    );
+  }
+  if (style === 'right') {
+    return (
+      <div style={{
+        position: 'absolute', right: 0, bottom: -14,
+        width: 50, height: 2.5, borderRadius: 1,
+        backgroundColor: theme.gold.primary,
+        opacity: opacity * 0.5,
+        boxShadow: `0 0 8px ${theme.gold.glow}`,
+      }} />
+    );
+  }
+  if (style === 'bottom') {
+    return (
+      <div style={{
+        position: 'absolute', bottom: -20, left: '25%', right: '25%',
+        height: 1.5, borderRadius: 1,
+        background: `linear-gradient(90deg, transparent, ${theme.gold.warm}, transparent)`,
+        opacity: opacity * 0.35,
+      }} />
+    );
+  }
+  return null;
+};
+
+/* ═══════════════════════════════════════════════
+   CAPTION PAGE
    ═══════════════════════════════════════════════ */
 const CaptionPage = ({ line, lineIdx, fps }) => {
   const frame = useCurrentFrame();
@@ -207,11 +256,10 @@ const CaptionPage = ({ line, lineIdx, fps }) => {
   const fontSize = getDynamicFontSize(line.words.length, layout.sizeMultiplier);
   const iconName = getIconForLine(lineIdx);
 
-  // Emphasis: longest word
   const emphasisIdx = line.words.reduce((best, w, i) =>
     w.word.length > (line.words[best]?.word.length || 0) ? i : best, 0);
 
-  // ── CINEMATIC SNAP ENTRANCE ──
+  // ── ENTRANCE ──
   const enterSpring = spring({
     frame, fps: configFps,
     config: { damping: 12, stiffness: 180, mass: 0.35 },
@@ -225,10 +273,9 @@ const CaptionPage = ({ line, lineIdx, fps }) => {
     extrapolateLeft: 'clamp', extrapolateRight: 'clamp',
   });
 
-  // ── CONTINUOUS ENLARGEMENT — 100% → 103% ──
+  // ── CONTINUOUS ENLARGEMENT ──
   const breatheProgress = interpolate(frame, [0, pageDurFrames], [0, 1], {
     extrapolateLeft: 'clamp', extrapolateRight: 'clamp',
-    easing: Easing.bezier(0.45, 0, 0.55, 1),
   });
   const breatheScale = 1 + breatheProgress * theme.caption.breatheScale;
 
@@ -242,19 +289,17 @@ const CaptionPage = ({ line, lineIdx, fps }) => {
 
   const exitSlideX = interpolate(exitProgress, [0, 1], [0, layout.slideExit.x]);
   const exitSlideY = interpolate(exitProgress, [0, 1], [0, layout.slideExit.y]);
-  const exitScale = interpolate(exitProgress, [0, 1], [1.0, 0.85]);
+  const exitScale = interpolate(exitProgress, [0, 1], [1.0, 0.88]);
   const exitOpacity = 1 - exitProgress;
 
-  // Combined
   const totalX = slideX + exitSlideX;
   const totalY = slideY + exitSlideY;
   const totalScale = entryScale * exitScale * breatheScale;
   const totalOpacity = entryOpacity * exitOpacity;
 
-  // Word highlighting
   const absoluteTimeSec = pageStartSec + (frame / fps) - offset;
 
-  // Icon glow intensity (for light cast)
+  // Icon glow
   const iconDrawComplete = interpolate(frame, [theme.timing.iconDrawFrames, theme.timing.iconDrawFrames + 10], [0, 1], {
     extrapolateLeft: 'clamp', extrapolateRight: 'clamp',
   });
@@ -263,7 +308,6 @@ const CaptionPage = ({ line, lineIdx, fps }) => {
 
   return (
     <AbsoluteFill style={{ pointerEvents: 'none' }}>
-      {/* Interactive light cast from icon onto text */}
       <IconLightCast
         x={layout.lightCast.x}
         y={layout.lightCast.y}
@@ -274,63 +318,36 @@ const CaptionPage = ({ line, lineIdx, fps }) => {
         position: 'absolute',
         ...layout.position,
         textAlign: layout.align,
-        maxWidth: layout.align === 'center' ? 920 : 750,
+        maxWidth: 920,
         padding: '10px 24px',
         opacity: totalOpacity,
         transform: `translate(${totalX}px, ${totalY}px) scale(${totalScale})`,
         willChange: 'transform, opacity',
       }}>
-        {/* Glow Icon — draws on with path trace */}
+        {/* Icon */}
         <div style={{
           position: 'absolute',
           ...layout.iconPos,
           opacity: totalOpacity,
         }}>
-          <GlowIcon iconName={iconName} size={56} delay={3} />
+          <GlowIcon iconName={iconName} size={52} delay={3} />
         </div>
 
         {/* Accent line */}
-        {layout.align === 'center' && (
-          <div style={{
-            position: 'absolute', bottom: -16, left: '12%', right: '12%',
-            height: 2, borderRadius: 1,
-            background: `linear-gradient(90deg, transparent, ${theme.gold.primary}, transparent)`,
-            opacity: totalOpacity * 0.45,
-            boxShadow: `0 0 10px ${theme.gold.glow}`,
-          }} />
-        )}
-        {(layout.align === 'left' || layout.align === 'right') && (
-          <div style={{
-            position: 'absolute',
-            [layout.align]: 0,
-            bottom: -12,
-            width: 55, height: 2.5, borderRadius: 1,
-            backgroundColor: theme.gold.primary,
-            opacity: totalOpacity * 0.55,
-            boxShadow: `0 0 10px ${theme.gold.glow}`,
-          }} />
-        )}
+        <AccentLine style={layout.accentStyle} opacity={totalOpacity} />
 
-        {/* Words */}
+        {/* Words with smooth highlighting */}
         <div style={{ position: 'relative', zIndex: 2 }}>
-          {line.words.map((word, wi) => {
-            const active = absoluteTimeSec >= word.start && absoluteTimeSec < word.end;
-            const past = absoluteTimeSec >= word.end;
-
-            return (
-              <AnimatedWord
-                key={`${lineIdx}-${wi}`}
-                word={word}
-                isActive={active}
-                isPast={past}
-                fps={configFps}
-                idx={wi}
-                pageFrame={frame}
-                fontSize={fontSize}
-                isEmphasis={wi === emphasisIdx}
-              />
-            );
-          })}
+          {line.words.map((word, wi) => (
+            <SmoothWord
+              key={`${lineIdx}-${wi}`}
+              word={word}
+              absoluteTimeSec={absoluteTimeSec}
+              fps={fps}
+              fontSize={fontSize}
+              isEmphasis={wi === emphasisIdx}
+            />
+          ))}
         </div>
       </div>
     </AbsoluteFill>
