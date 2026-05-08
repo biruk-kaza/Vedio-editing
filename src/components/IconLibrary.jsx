@@ -158,6 +158,9 @@ export const GlowIcon = ({ iconName = 'cross', size = 80, delay = 0, isActive = 
   const opacity = interpolate(local, [0, 5], [0, 1], { extrapolateLeft: 'clamp' });
   const glowRadius = interpolate(glowProgress, [0, 1], [0, 35]) + (isActive ? 25 : 0);
 
+  // Specular leading edge brightness
+  const specularIntensity = interpolate(drawProgress, [0, 0.5, 0.9, 1], [0, 1, 0.6, 0.3]);
+
   if (opacity < 0.01) return null;
 
   return (
