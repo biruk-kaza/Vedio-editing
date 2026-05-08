@@ -152,25 +152,46 @@ const CaptionLine = ({ line, fps }) => {
 
   const absoluteTimeSec = line.start + frame / fps;
 
+  // ── AUDIO-REACTIVE GLOW & CONTINUOUS ZOOM ──
+  // A very subtle continuous zoom (Ken Burns effect) for the caption container
+  const breatheScale = interpolate(frame, [0, pageDurFrames + 10], [1.0, 1.05], {
+    extrapolateLeft: 'clamp', extrapolateRight: 'clamp'
+  });
+  
+  // Audio-reactive ambient glow (simulated using sine waves)
+  const reactivePulse = interpolate(Math.sin((frame + line.start * fps) * 0.15), [-1, 1], [0.15, 0.4]);
+
   return (
-    <AbsoluteFill style={{ pointerEvents: 'none' }}>
-      {/* Gradient backdrop for readability */}
+    <AbsoluteFill style={{ pointerEvents: 'none', perspective: '1000px' }}>
+      {/* Dynamic Audio-Reactive Glow behind the pill */}
+      <div
+        style={{
+          position: 'absolute',
+          bottom: '8%',
+          left: '50%',
+          width: '70%',
+          height: '20%',
+          transform: `translate(-50%, ${entryY + exitY}px)`,
+          background: `radial-gradient(ellipse, rgba(255,255,255,${reactivePulse * totalOpacity}) 0%, transparent 60%)`,
+          filter: 'blur(40px)',
+          willChange: 'transform, opacity',
+        }}
+      />
+
+      {/* Gradient backdrop for overall readability */}
       <div
         style={{
           position: 'absolute',
           bottom: 0,
           left: 0,
           right: 0,
-          height: '30%',
-          background:
-            'linear-gradient(0deg, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.3) 55%, transparent 100%)',
+          height: '35%',
+          background: 'linear-gradient(0deg, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.3) 50%, transparent 100%)',
           opacity: totalOpacity,
         }}
       />
 
-      {/* ── PERFECT CENTER CONTAINER ──
-          Uses flexbox to guarantee horizontal + vertical centering.
-          The text never drifts to the side. */}
+      {/* ── PERFECT CENTER CONTAINER ── */}
       <div
         style={{
           position: 'absolute',
@@ -182,7 +203,7 @@ const CaptionLine = ({ line, fps }) => {
           alignItems: 'center',
           justifyContent: 'center',
           opacity: totalOpacity,
-          transform: `translateY(${entryY + exitY}px)`,
+          transform: `translateY(${entryY + exitY}px) scale(${breatheScale})`,
           willChange: 'transform, opacity',
         }}
       >

@@ -173,6 +173,7 @@ export const GlowIcon = ({ iconName = 'cross', size = 80, delay = 0 }) => {
       transform: `scale(${iconScale * breath})`,
       filter: `drop-shadow(0 0 ${glowRadius}px ${theme.gold.glow})`,
       willChange: 'transform, opacity, filter',
+      mixBlendMode: 'screen', // Add cinematic blending
     }}>
       <svg
         viewBox={iconData.viewBox}
