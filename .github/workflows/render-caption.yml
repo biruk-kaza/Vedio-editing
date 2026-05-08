@@ -25,12 +25,24 @@ on:
           - high
           - ultra
       title:
-        description: "Video title (for metadata)"
+        description: "Video title (for metadata/intro)"
         required: false
         default: "EOTC Voice Studio"
         type: string
       video_url:
-        description: "Optional — direct URL to download video (if not in repo)"
+        description: |
+          Direct URL to video file to download into input/
+          (mp4/mov/webm supported)
+          Leave empty if video is already in input/ folder in repo
+        required: false
+        default: ""
+        type: string
+      captions_url:
+        description: |
+          Direct URL to your captions.json file
+          (e.g. raw GitHub Gist URL, Dropbox, etc.)
+          Leave empty if captions.json is already in repo root
+          See CAPTIONS_FORMAT.md for format details
         required: false
         default: ""
         type: string
@@ -125,6 +137,18 @@ jobs:
           echo "word_count=$WORD_COUNT" >> $GITHUB_OUTPUT
           echo "duration=$DURATION" >> $GITHUB_OUTPUT
           echo "resolution=$RESOLUTION" >> $GITHUB_OUTPUT
+
+      - name: "📥 Download Captions (if URL provided)"
+        run: |
+          CAPTIONS_URL="${{ github.event.inputs.captions_url }}"
+          if [ -n "$CAPTIONS_URL" ]; then
+            echo "📥 Downloading captions.json from URL..."
+            curl -L --max-time 60 -o captions.json "$CAPTIONS_URL" \
+              && echo "✅ captions.json downloaded" \
+              || { echo "❌ Failed to download captions from $CAPTIONS_URL"; exit 1; }
+          else
+            echo "ℹ️  Using captions.json already in repo root"
+          fi
 
       - name: "📦 Setup Node.js 20"
         uses: actions/setup-node@v4

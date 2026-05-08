@@ -37,23 +37,53 @@ function loadCaptions() {
   const jsonPath = path.join(__dirname, 'captions.json');
   const reviewPath = path.join(__dirname, 'captions_review.txt');
 
+  // ── FORMAT 1: captions.json with word-level timestamps ──
   if (fs.existsSync(jsonPath)) {
     console.log('📖 Loading captions from captions.json...');
     const data = JSON.parse(fs.readFileSync(jsonPath, 'utf-8'));
-    if (!data.words || data.words.length === 0) {
-      throw new Error('captions.json has no word timestamps. Re-run transcription.');
+
+    // Case A: has word-level timestamps (ideal)
+    if (data.words && data.words.length > 0) {
+      console.log(`   ✅ ${data.words.length} words loaded (word-level timestamps)`);
+      return {
+        words: data.words,
+        totalDuration: data.total_duration || data.words[data.words.length - 1].end,
+      };
     }
-    console.log(`   ✅ ${data.words.length} words loaded`);
-    return {
-      words: data.words,
-      totalDuration: data.total_duration || data.words[data.words.length - 1].end,
-    };
+
+    // Case B: has segments (phrases) — split each segment text into evenly-spaced words
+    if (data.segments && data.segments.length > 0) {
+      console.log(`   ⚠️  No word-level timestamps found. Converting ${data.segments.length} segments to words...`);
+      const words = [];
+      for (const seg of data.segments) {
+        const segWords = (seg.text || '').trim().split(/\s+/).filter(Boolean);
+        if (segWords.length === 0) continue;
+        const segDur = (seg.end - seg.start);
+        const wordDur = segDur / segWords.length;
+        segWords.forEach((w, i) => {
+          words.push({
+            word: w,
+            start: Math.round((seg.start + i * wordDur) * 100) / 100,
+            end: Math.round((seg.start + (i + 1) * wordDur) * 100) / 100,
+          });
+        });
+      }
+      if (words.length === 0) throw new Error('Could not extract words from segments.');
+      console.log(`   ✅ ${words.length} words generated from segments`);
+      return {
+        words,
+        totalDuration: data.total_duration || data.segments[data.segments.length - 1].end,
+      };
+    }
+
+    throw new Error('captions.json has no words or segments. See CAPTIONS_FORMAT.md for the correct format.');
   }
 
+  // ── FORMAT 2: captions_review.txt with [start → end] word format ──
   if (fs.existsSync(reviewPath)) {
     console.log('📖 Loading from captions_review.txt...');
     const content = fs.readFileSync(reviewPath, 'utf-8');
-    const wordPattern = /^\[(\d+\.?\d*)\s*→\s*(\d+\.?\d*)\]\s+(.+)$/gm;
+    const wordPattern = /^\[(\d+\.?\d*)\s*[→\-\>]+\s*(\d+\.?\d*)\]\s+(.+)$/gm;
     const words = [];
     let match;
     while ((match = wordPattern.exec(content)) !== null) {
@@ -63,12 +93,17 @@ function loadCaptions() {
         end: parseFloat(match[2]),
       });
     }
-    if (words.length === 0) throw new Error('No timestamps found in captions_review.txt');
-    console.log(`   ✅ ${words.length} words loaded from review file`);
+    if (words.length === 0) throw new Error('No timestamps found in captions_review.txt. Format: [0.0 → 0.5] word');
+    console.log(`   ✅ ${words.length} words loaded from captions_review.txt`);
     return { words, totalDuration: words[words.length - 1].end };
   }
 
-  throw new Error('No caption files found! Run transcription (Phase 1) first.');
+  throw new Error(
+    'No caption files found!\n' +
+    '  Option 1: Add captions.json to repo root (see CAPTIONS_FORMAT.md)\n' +
+    '  Option 2: Add captions_review.txt with [start → end] word format\n' +
+    '  Option 3: Provide captions_url in the GitHub Actions workflow input'
+  );
 }
 
 // ── Find Media Files ──
