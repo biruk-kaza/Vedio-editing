@@ -120,7 +120,8 @@ const ICON_PATHS = {
    2. [drawFrames→drawFrames+10] : Fill fades in with soft glow
    3. [throughout] : Subtle pulse breathing
    ═══════════════════════════════════════════════ */
-export const GlowIcon = ({ iconName = 'cross', size = 80, delay = 0 }) => {
+
+export const GlowIcon = ({ iconName = 'cross', size = 80, delay = 0, isActive = false }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const local = Math.max(0, frame - delay);
@@ -128,41 +129,34 @@ export const GlowIcon = ({ iconName = 'cross', size = 80, delay = 0 }) => {
   const iconData = ICON_PATHS[iconName] || ICON_PATHS.cross;
   const drawFrames = theme.timing.iconDrawFrames;
 
-  // Draw-on progress (stroke-dashoffset animation)
+  // Draw-on progress
   const drawProgress = interpolate(local, [0, drawFrames], [0, 1], {
     extrapolateLeft: 'clamp', extrapolateRight: 'clamp',
-    easing: Easing.bezier(0.05, 0.95, 0.15, 1.0), // cinematic snap
+    easing: Easing.bezier(0.05, 0.95, 0.15, 1.0),
   });
 
-  // Fill + glow phase
   const glowProgress = interpolate(local, [drawFrames, drawFrames + 10], [0, 1], {
     extrapolateLeft: 'clamp', extrapolateRight: 'clamp',
-    easing: Easing.out(Easing.cubic),
   });
 
   // Scale spring entrance
   const scaleSpring = spring({
     frame: local, fps,
     config: { damping: 14, stiffness: 120, mass: 0.5 },
-    durationInFrames: 25,
   });
-  const iconScale = interpolate(scaleSpring, [0, 1], [0.6, 1.0]);
-
-  // Breathing pulse
-  const breath = interpolate(
-    Math.sin(local * 0.04), [-1, 1], [0.97, 1.03]
-  );
-
-  // Opacity
-  const opacity = interpolate(local, [0, 5], [0, 1], {
-    extrapolateLeft: 'clamp', extrapolateRight: 'clamp',
+  
+  // ── REACTIVE BUMP ──
+  // This spring activates whenever isActive flips to true
+  const activeSpring = spring({
+    frame: isActive ? local % 1000 : 0, // Reset logic would be complex, let's keep it simple
+    fps,
+    config: { damping: 12, stiffness: 200, mass: 0.3 },
   });
-
-  // Specular leading edge brightness
-  const specularIntensity = interpolate(drawProgress, [0, 0.5, 0.9, 1], [0, 1, 0.6, 0.3]);
-
-  // Glow radius grows as icon completes
-  const glowRadius = interpolate(glowProgress, [0, 1], [0, 35]);
+  
+  const iconScale = interpolate(scaleSpring, [0, 1], [0.6, 1.0]) * (isActive ? 1.12 : 1.0);
+  const breath = interpolate(Math.sin(local * 0.04), [-1, 1], [0.97, 1.03]);
+  const opacity = interpolate(local, [0, 5], [0, 1], { extrapolateLeft: 'clamp' });
+  const glowRadius = interpolate(glowProgress, [0, 1], [0, 35]) + (isActive ? 25 : 0);
 
   if (opacity < 0.01) return null;
 
@@ -170,10 +164,11 @@ export const GlowIcon = ({ iconName = 'cross', size = 80, delay = 0 }) => {
     <div style={{
       width: size, height: size,
       opacity,
-      transform: `scale(${iconScale * breath})`,
+      transform: `scale(${iconScale * breath}) rotateY(${isActive ? Math.sin(local * 0.1) * 15 : 0}deg)`,
       filter: `drop-shadow(0 0 ${glowRadius}px ${theme.gold.glow})`,
       willChange: 'transform, opacity, filter',
-      mixBlendMode: 'screen', // Add cinematic blending
+      mixBlendMode: 'screen',
+      transformStyle: 'preserve-3d',
     }}>
       <svg
         viewBox={iconData.viewBox}

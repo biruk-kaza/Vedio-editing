@@ -207,8 +207,21 @@ const CaptionPage = ({ line, lineIdx, fps, seqStartFrame }) => {
 
   if (totalOpacity < 0.01) return null;
 
-  // Icon element
-  const iconEl = <GlowIcon iconName={iconName} size={comp.iconSize} delay={2} />;
+  // ── REACTIVE ICON LOGIC ──
+  // Determine if ANY word in this line is currently active
+  const absoluteTimeSec = globalFrame / fps;
+  const isAnyWordActive = line.words.some(w => {
+    const wordEndPadded = w.end + 0.05;
+    return absoluteTimeSec >= w.start && absoluteTimeSec < wordEndPadded;
+  });
+
+  // Icon element with reactivity
+  const iconEl = <GlowIcon 
+    iconName={iconName} 
+    size={comp.iconSize} 
+    delay={2} 
+    isActive={isAnyWordActive} 
+  />;
 
   // Text element
   const textEl = (
