@@ -72,7 +72,10 @@ function groupWordsIntoLines(words, max) {
 /* ═══════════════════════════════════════════════
    CLEAN WORD — Crisp, glitch-free highlighting
    ═══════════════════════════════════════════════ */
-const SmoothWord = ({ word, absoluteTimeSec, fps, fontSize }) => {
+const SmoothWord = ({ word, wi, absoluteTimeSec, fps, fontSize }) => {
+  const frame = useCurrentFrame();
+  const { fps: configFps } = useVideoConfig();
+
   const rampSec = HIGHLIGHT_RAMP / fps;
 
   const rampIn = interpolate(
@@ -87,33 +90,47 @@ const SmoothWord = ({ word, absoluteTimeSec, fps, fontSize }) => {
   const isPast = absoluteTimeSec > word.end + rampSec;
 
   // Clean white color with smooth opacity transition
-  const opacity = interpolate(progress, [0, 1], [isPast ? 0.55 : 0.3, 1.0]);
-  const scale = interpolate(progress, [0, 1], [1.0, 1.05]);
+  const opacity = interpolate(progress, [0, 1], [isPast ? 0.6 : 0.35, 1.0]);
+  const scale = interpolate(progress, [0, 1], [1.0, 1.06]);
   const fontWeight = progress > 0.5 ? 700 : 600;
 
   // Subtle gold tint when active
-  const goldTint = interpolate(progress, [0, 1], [0, 30]);
-  const r = Math.round(255);
+  const goldTint = interpolate(progress, [0, 1], [0, 45]);
+  const r = 255;
   const g = Math.round(255 - goldTint * 0.2);
   const b = Math.round(255 - goldTint);
+
+  // ── JAW-DROPPING 3D STAGGER ENTRANCE ──
+  const enterSpring = spring({
+    frame: frame - wi * 3.5, // 3.5 frame stagger per word
+    fps: configFps,
+    config: { damping: 14, stiffness: 140, mass: 0.6 },
+    durationInFrames: 16,
+  });
+
+  const entryY = interpolate(enterSpring, [0, 1], [25, 0]);
+  const entryZ = interpolate(enterSpring, [0, 1], [150, 0]);
+  const entryRotateX = interpolate(enterSpring, [0, 1], [-55, 0]);
+  const entryOpacity = interpolate(enterSpring, [0, 1], [0, 1]);
 
   return (
     <span
       style={{
         display: 'inline-block',
         position: 'relative',
-        color: `rgba(${r}, ${g}, ${b}, ${opacity})`,
+        color: `rgba(${r}, ${g}, ${b}, ${opacity * entryOpacity})`,
         fontSize,
         fontFamily: theme.fonts.caption,
         fontWeight,
-        transform: `scale(${scale})`,
+        transform: `translate3d(0, ${entryY}px, ${entryZ}px) rotateX(${entryRotateX}deg) scale(${scale})`,
         transformOrigin: 'center bottom',
         textShadow: progress > 0.3
-          ? `0 0 8px rgba(212,175,55,${progress * 0.3}), 0 3px 8px rgba(0,0,0,0.6)`
+          ? `0 0 12px rgba(212,175,55,${progress * 0.45}), 0 4px 12px rgba(0,0,0,0.8)`
           : '0 3px 8px rgba(0,0,0,0.5)',
         margin: '0 10px',
         lineHeight: 1.45,
         WebkitFontSmoothing: 'antialiased',
+        transformStyle: 'preserve-3d',
       }}
     >
       {word.word}
@@ -198,6 +215,7 @@ const CaptionPage = ({ line, lineIdx, fps }) => {
         <SmoothWord
           key={`${lineIdx}-${wi}`}
           word={word}
+          wi={wi}
           absoluteTimeSec={absoluteTimeSec}
           fps={fps}
           fontSize={fontSize}

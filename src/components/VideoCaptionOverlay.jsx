@@ -51,7 +51,10 @@ function groupWordsIntoLines(words, max) {
 /* ═══════════════════════════════════════════════
    CLEAN WORD — Pure, crisp, zero artifacts
    ═══════════════════════════════════════════════ */
-const CleanWord = ({ word, absoluteTimeSec, fps }) => {
+const CleanWord = ({ word, wi, absoluteTimeSec, fps }) => {
+  const frame = useCurrentFrame();
+  const { fps: configFps } = useVideoConfig();
+
   const rampSec = HIGHLIGHT_RAMP / fps;
 
   const rampIn = interpolate(
@@ -76,15 +79,26 @@ const CleanWord = ({ word, absoluteTimeSec, fps }) => {
   const scale = interpolate(progress, [0, 1], [1.0, 1.04]);
   const fontWeight = progress > 0.5 ? 700 : 600;
 
+  // ── PREMIUM SUBTLE STAGGER ──
+  const enterSpring = spring({
+    frame: frame - wi * 2, // 2-frame stagger
+    fps: configFps,
+    config: { damping: 18, stiffness: 140, mass: 0.5 },
+    durationInFrames: 12,
+  });
+
+  const entryY = interpolate(enterSpring, [0, 1], [15, 0]);
+  const entryOpacity = interpolate(enterSpring, [0, 1], [0, 1]);
+
   return (
     <span
       style={{
         display: 'inline-block',
-        color: `rgba(255, 255, 255, ${opacity})`,
+        color: `rgba(255, 255, 255, ${opacity * entryOpacity})`,
         fontSize: 78,
         fontFamily: theme.fonts.caption,
         fontWeight,
-        transform: `scale(${scale})`,
+        transform: `translateY(${entryY}px) scale(${scale})`,
         transformOrigin: 'center bottom',
         textShadow: '0 2px 8px rgba(0,0,0,0.95), 0 0 3px rgba(0,0,0,0.8)',
         WebkitTextStroke: '1.5px rgba(0,0,0,0.4)',
@@ -172,17 +186,19 @@ const CaptionLine = ({ line, fps }) => {
           willChange: 'transform, opacity',
         }}
       >
-        {/* Semi-transparent backdrop pill */}
+          {/* ── PREMIUM FROSTED GLASS PILL ── */}
         <div
           style={{
             display: 'flex',
             flexWrap: 'wrap',
             alignItems: 'center',
             justifyContent: 'center',
-            padding: '16px 28px',
-            borderRadius: 16,
-            background: 'rgba(0, 0, 0, 0.35)',
-            backdropFilter: 'blur(2px)',
+            padding: '16px 32px',
+            borderRadius: 24,
+            background: 'rgba(15, 15, 15, 0.45)',
+            backdropFilter: 'blur(12px) saturate(140%)',
+            border: '1px solid rgba(255, 255, 255, 0.08)',
+            boxShadow: '0 12px 32px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.3)',
             maxWidth: '92%',
           }}
         >
@@ -190,6 +206,7 @@ const CaptionLine = ({ line, fps }) => {
             <CleanWord
               key={`${line.start}-${wi}`}
               word={word}
+              wi={wi}
               absoluteTimeSec={absoluteTimeSec}
               fps={fps}
             />
