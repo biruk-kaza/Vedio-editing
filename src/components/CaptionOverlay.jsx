@@ -70,47 +70,57 @@ function groupWordsIntoLines(words, max) {
 }
 
 /* ═══════════════════════════════════════════════
-   CLEAN WORD — Crisp, glitch-free highlighting
+   CLEAN WORD — Snappy, AE-Style Physics
    ═══════════════════════════════════════════════ */
-const SmoothWord = ({ word, wi, absoluteTimeSec, fps, fontSize }) => {
-  const frame = useCurrentFrame();
+const SmoothWord = ({ word, wi, globalFrame, fps, fontSize, localFrame }) => {
   const { fps: configFps } = useVideoConfig();
 
-  const rampSec = HIGHLIGHT_RAMP / fps;
+  // 100% Accurate Absolute Timing
+  const absoluteTimeSec = globalFrame / fps;
+  const wordEndPadded = word.end + 0.05; // Hold slightly after word ends
+  const isCurrent = absoluteTimeSec >= word.start && absoluteTimeSec < wordEndPadded;
+  const isPast = absoluteTimeSec >= wordEndPadded;
 
-  const rampIn = interpolate(
-    absoluteTimeSec, [word.start - rampSec, word.start], [0, 1],
-    { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }
-  );
-  const rampOut = interpolate(
-    absoluteTimeSec, [word.end, word.end + rampSec], [1, 0],
-    { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }
-  );
-  const progress = Math.min(rampIn, rampOut);
-  const isPast = absoluteTimeSec > word.end + rampSec;
+  // Snappy Color Cut (No mushy ramps)
+  const opacity = isCurrent ? 1.0 : (isPast ? 0.6 : 0.3);
+  
+  // ── AFTER EFFECTS STYLE SNAPPY HIGHLIGHT SPRING ──
+  const wordStartFrame = Math.round(word.start * fps);
+  const framesSinceStart = globalFrame - wordStartFrame;
+  const wordEndFrame = Math.round(wordEndPadded * fps);
+  const framesSinceEnd = globalFrame - wordEndFrame;
 
-  // Clean white color with smooth opacity transition
-  const opacity = interpolate(progress, [0, 1], [isPast ? 0.6 : 0.35, 1.0]);
-  const scale = interpolate(progress, [0, 1], [1.0, 1.06]);
-  const fontWeight = progress > 0.5 ? 700 : 600;
+  // Extremely tight, fast spring for the highlight pop
+  const popSpring = spring({
+    frame: framesSinceStart,
+    fps: configFps,
+    config: { damping: 12, stiffness: 300, mass: 0.4 },
+  });
+  const downSpring = spring({
+    frame: framesSinceEnd,
+    fps: configFps,
+    config: { damping: 14, stiffness: 250, mass: 0.4 },
+  });
 
-  // Subtle gold tint when active
-  const goldTint = interpolate(progress, [0, 1], [0, 45]);
+  const activeBump = Math.max(0, popSpring - downSpring);
+  const scale = 1.0 + activeBump * 0.08; // Sharp 8% pop
+
+  // Active color (Golden pop)
   const r = 255;
-  const g = Math.round(255 - goldTint * 0.2);
-  const b = Math.round(255 - goldTint);
+  const g = isCurrent ? 220 : 255;
+  const b = isCurrent ? 150 : 255;
 
   // ── JAW-DROPPING 3D STAGGER ENTRANCE ──
   const enterSpring = spring({
-    frame: frame - wi * 3.5, // 3.5 frame stagger per word
+    frame: localFrame - wi * 2.5, // Faster 2.5 frame stagger
     fps: configFps,
-    config: { damping: 14, stiffness: 140, mass: 0.6 },
-    durationInFrames: 16,
+    config: { damping: 14, stiffness: 180, mass: 0.5 },
+    durationInFrames: 14,
   });
 
-  const entryY = interpolate(enterSpring, [0, 1], [25, 0]);
-  const entryZ = interpolate(enterSpring, [0, 1], [150, 0]);
-  const entryRotateX = interpolate(enterSpring, [0, 1], [-55, 0]);
+  const entryY = interpolate(enterSpring, [0, 1], [30, 0]);
+  const entryZ = interpolate(enterSpring, [0, 1], [200, 0]);
+  const entryRotateX = interpolate(enterSpring, [0, 1], [-65, 0]);
   const entryOpacity = interpolate(enterSpring, [0, 1], [0, 1]);
 
   return (
@@ -121,12 +131,12 @@ const SmoothWord = ({ word, wi, absoluteTimeSec, fps, fontSize }) => {
         color: `rgba(${r}, ${g}, ${b}, ${opacity * entryOpacity})`,
         fontSize,
         fontFamily: theme.fonts.caption,
-        fontWeight,
+        fontWeight: 700, // CONSTANT to prevent layout wobble
         transform: `translate3d(0, ${entryY}px, ${entryZ}px) rotateX(${entryRotateX}deg) scale(${scale})`,
         transformOrigin: 'center bottom',
-        textShadow: progress > 0.3
-          ? `0 0 12px rgba(212,175,55,${progress * 0.45}), 0 4px 12px rgba(0,0,0,0.8)`
-          : '0 3px 8px rgba(0,0,0,0.5)',
+        textShadow: isCurrent
+          ? `0 0 16px rgba(212,175,55,0.7), 0 4px 12px rgba(0,0,0,0.9)`
+          : '0 3px 8px rgba(0,0,0,0.6)',
         margin: '0 10px',
         lineHeight: 1.45,
         WebkitFontSmoothing: 'antialiased',
@@ -141,8 +151,9 @@ const SmoothWord = ({ word, wi, absoluteTimeSec, fps, fontSize }) => {
 /* ═══════════════════════════════════════════════
    CAPTION PAGE — Center-locked with Z-depth
    ═══════════════════════════════════════════════ */
-const CaptionPage = ({ line, lineIdx, fps }) => {
-  const frame = useCurrentFrame();
+const CaptionPage = ({ line, lineIdx, fps, seqStartFrame }) => {
+  const localFrame = useCurrentFrame();
+  const globalFrame = seqStartFrame + localFrame;
   const { fps: configFps } = useVideoConfig();
 
   const pageDurFrames = Math.ceil((line.end - line.start) * fps);
@@ -161,7 +172,7 @@ const CaptionPage = ({ line, lineIdx, fps }) => {
   // ═══ Z-AXIS ENTRANCE ═══
   // Text emerges from depth (scale 0.7 → 1.0) with perspective
   const enterSpring = spring({
-    frame,
+    frame: localFrame,
     fps: configFps,
     config: { damping: 18, stiffness: 100, mass: 0.6 },
     durationInFrames: 18,
@@ -174,14 +185,13 @@ const CaptionPage = ({ line, lineIdx, fps }) => {
   const entryRotateX = interpolate(enterSpring, [0, 1], [8, 0]);
 
   // Slow continuous zoom during display (Ken Burns effect)
-  const breathe = interpolate(frame, [0, pageDurFrames], [1.0, 1.04], {
+  const breathe = interpolate(localFrame, [0, pageDurFrames], [1.0, 1.04], {
     extrapolateLeft: 'clamp', extrapolateRight: 'clamp',
   });
 
-  // ═══ Z-AXIS EXIT ═══
-  // Text recedes back into depth
+  // Calculate local exit timings
   const exitStart = pageDurFrames + 3;
-  const exitProgress = interpolate(frame, [exitStart, exitStart + 10], [0, 1], {
+  const exitProgress = interpolate(localFrame, [exitStart, exitStart + 10], [0, 1], {
     extrapolateLeft: 'clamp', extrapolateRight: 'clamp',
     easing: EASE_EXIT,
   });
@@ -196,8 +206,6 @@ const CaptionPage = ({ line, lineIdx, fps }) => {
   const totalRotateX = entryRotateX + exitRotateX;
 
   if (totalOpacity < 0.01) return null;
-
-  const absoluteTimeSec = line.start + (frame / fps);
 
   // Icon element
   const iconEl = <GlowIcon iconName={iconName} size={comp.iconSize} delay={2} />;
@@ -216,7 +224,8 @@ const CaptionPage = ({ line, lineIdx, fps }) => {
           key={`${lineIdx}-${wi}`}
           word={word}
           wi={wi}
-          absoluteTimeSec={absoluteTimeSec}
+          globalFrame={globalFrame}
+          localFrame={localFrame}
           fps={fps}
           fontSize={fontSize}
         />
@@ -328,7 +337,7 @@ export const CaptionOverlay = ({ words = [], introFrames = 0 }) => {
             from={Math.max(0, startFrame)}
             durationInFrames={duration}
           >
-            <CaptionPage line={line} lineIdx={i} fps={fps} />
+            <CaptionPage line={line} lineIdx={i} fps={fps} seqStartFrame={Math.max(0, startFrame)} />
           </Sequence>
         );
       })}

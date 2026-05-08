@@ -49,39 +49,43 @@ function groupWordsIntoLines(words, max) {
 }
 
 /* ═══════════════════════════════════════════════
-   CLEAN WORD — Pure, crisp, zero artifacts
+   CLEAN WORD — Pure, Snappy, AE-Style Physics
    ═══════════════════════════════════════════════ */
-const CleanWord = ({ word, wi, absoluteTimeSec, fps }) => {
-  const frame = useCurrentFrame();
+const CleanWord = ({ word, wi, globalFrame, localFrame, fps }) => {
   const { fps: configFps } = useVideoConfig();
 
-  const rampSec = HIGHLIGHT_RAMP / fps;
+  // 100% Accurate Absolute Timing
+  const absoluteTimeSec = globalFrame / fps;
+  const wordEndPadded = word.end + 0.05; // Hold slightly
+  const isCurrent = absoluteTimeSec >= word.start && absoluteTimeSec < wordEndPadded;
+  const isPast = absoluteTimeSec >= wordEndPadded;
 
-  const rampIn = interpolate(
-    absoluteTimeSec,
-    [word.start - rampSec, word.start],
-    [0, 1],
-    { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }
-  );
-  const rampOut = interpolate(
-    absoluteTimeSec,
-    [word.end, word.end + rampSec],
-    [1, 0],
-    { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }
-  );
-  const progress = Math.min(rampIn, rampOut);
-  const isPast = absoluteTimeSec > word.end + rampSec;
+  // Snappy Color Cut (No mushy ramps)
+  const opacity = isCurrent ? 1.0 : (isPast ? 0.75 : 0.4);
 
-  const opacity = interpolate(
-    progress, [0, 1],
-    [isPast ? 0.6 : 0.35, 1.0]
-  );
-  const scale = interpolate(progress, [0, 1], [1.0, 1.04]);
-  const fontWeight = progress > 0.5 ? 700 : 600;
+  // ── AFTER EFFECTS STYLE SNAPPY HIGHLIGHT SPRING ──
+  const wordStartFrame = Math.round(word.start * fps);
+  const framesSinceStart = globalFrame - wordStartFrame;
+  const wordEndFrame = Math.round(wordEndPadded * fps);
+  const framesSinceEnd = globalFrame - wordEndFrame;
+
+  const popSpring = spring({
+    frame: framesSinceStart,
+    fps: configFps,
+    config: { damping: 12, stiffness: 300, mass: 0.4 },
+  });
+  const downSpring = spring({
+    frame: framesSinceEnd,
+    fps: configFps,
+    config: { damping: 14, stiffness: 250, mass: 0.4 },
+  });
+
+  const activeBump = Math.max(0, popSpring - downSpring);
+  const scale = 1.0 + activeBump * 0.05; // Subtle 5% pop
 
   // ── PREMIUM SUBTLE STAGGER ──
   const enterSpring = spring({
-    frame: frame - wi * 2, // 2-frame stagger
+    frame: localFrame - wi * 2, // 2-frame stagger
     fps: configFps,
     config: { damping: 18, stiffness: 140, mass: 0.5 },
     durationInFrames: 12,
@@ -97,7 +101,7 @@ const CleanWord = ({ word, wi, absoluteTimeSec, fps }) => {
         color: `rgba(255, 255, 255, ${opacity * entryOpacity})`,
         fontSize: 78,
         fontFamily: theme.fonts.caption,
-        fontWeight,
+        fontWeight: 700, // CONSTANT to prevent layout wobble
         transform: `translateY(${entryY}px) scale(${scale})`,
         transformOrigin: 'center bottom',
         textShadow: '0 2px 8px rgba(0,0,0,0.95), 0 0 3px rgba(0,0,0,0.8)',
@@ -117,14 +121,15 @@ const CleanWord = ({ word, wi, absoluteTimeSec, fps }) => {
 /* ═══════════════════════════════════════════════
    CAPTION LINE — Perfectly centered with backdrop
    ═══════════════════════════════════════════════ */
-const CaptionLine = ({ line, fps }) => {
-  const frame = useCurrentFrame();
+const CaptionLine = ({ line, fps, seqStartFrame }) => {
+  const localFrame = useCurrentFrame();
+  const globalFrame = seqStartFrame + localFrame;
   const { fps: configFps } = useVideoConfig();
   const pageDurFrames = Math.ceil((line.end - line.start) * fps);
 
   // Entry: smooth spring (no bounce)
   const enterSpring = spring({
-    frame,
+    frame: localFrame,
     fps: configFps,
     config: { damping: 22, stiffness: 120, mass: 0.5 },
     durationInFrames: 12,
@@ -135,7 +140,7 @@ const CaptionLine = ({ line, fps }) => {
   // Exit: smooth fade
   const exitStart = pageDurFrames + 4;
   const exitProgress = interpolate(
-    frame,
+    localFrame,
     [exitStart, exitStart + 8],
     [0, 1],
     {
@@ -150,16 +155,14 @@ const CaptionLine = ({ line, fps }) => {
   const totalOpacity = entryOpacity * exitOpacity;
   if (totalOpacity < 0.01) return null;
 
-  const absoluteTimeSec = line.start + frame / fps;
-
   // ── AUDIO-REACTIVE GLOW & CONTINUOUS ZOOM ──
   // A very subtle continuous zoom (Ken Burns effect) for the caption container
-  const breatheScale = interpolate(frame, [0, pageDurFrames + 10], [1.0, 1.05], {
+  const breatheScale = interpolate(localFrame, [0, pageDurFrames + 10], [1.0, 1.05], {
     extrapolateLeft: 'clamp', extrapolateRight: 'clamp'
   });
   
   // Audio-reactive ambient glow (simulated using sine waves)
-  const reactivePulse = interpolate(Math.sin((frame + line.start * fps) * 0.15), [-1, 1], [0.15, 0.4]);
+  const reactivePulse = interpolate(Math.sin((globalFrame) * 0.15), [-1, 1], [0.15, 0.4]);
 
   return (
     <AbsoluteFill style={{ pointerEvents: 'none', perspective: '1000px' }}>
@@ -228,7 +231,8 @@ const CaptionLine = ({ line, fps }) => {
               key={`${line.start}-${wi}`}
               word={word}
               wi={wi}
-              absoluteTimeSec={absoluteTimeSec}
+              globalFrame={globalFrame}
+              localFrame={localFrame}
               fps={fps}
             />
           ))}
@@ -262,7 +266,7 @@ export const VideoCaptionOverlay = ({ words = [] }) => {
             from={Math.max(0, startFrame)}
             durationInFrames={duration}
           >
-            <CaptionLine line={line} fps={fps} />
+            <CaptionLine line={line} fps={fps} seqStartFrame={Math.max(0, startFrame)} />
           </Sequence>
         );
       })}
