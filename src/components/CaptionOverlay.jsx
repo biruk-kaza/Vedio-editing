@@ -123,6 +123,20 @@ const SmoothWord = ({ word, wi, globalFrame, fps, fontSize, localFrame }) => {
   const entryRotateX = interpolate(enterSpring, [0, 1], [-65, 0]);
   const entryOpacity = interpolate(enterSpring, [0, 1], [0, 1]);
 
+  // ── CHROMATIC ABERRATION & JITTER (AE-LEVEL) ──
+  // Simulates lens color fringing and hand-animated jitter
+  const jitterX = isCurrent ? Math.sin(globalFrame * 0.8) * 0.8 : 0;
+  const jitterY = isCurrent ? Math.cos(globalFrame * 0.7) * 0.8 : 0;
+  
+  // Chromatic Aberration: Red/Blue fringe that grows with the pop
+  const aberration = activeBump * 3.5;
+  const redFringe = `-${aberration}px 0 2px rgba(255, 0, 0, 0.45)`;
+  const blueFringe = `${aberration}px 0 2px rgba(0, 0, 255, 0.45)`;
+  
+  const textShadowStack = isCurrent
+    ? `${redFringe}, ${blueFringe}, 0 0 20px rgba(212,175,55,0.8), 0 4px 15px rgba(0,0,0,0.9)`
+    : '0 3px 10px rgba(0,0,0,0.6)';
+
   return (
     <span
       style={{
@@ -131,16 +145,15 @@ const SmoothWord = ({ word, wi, globalFrame, fps, fontSize, localFrame }) => {
         color: `rgba(${r}, ${g}, ${b}, ${opacity * entryOpacity})`,
         fontSize,
         fontFamily: theme.fonts.caption,
-        fontWeight: 700, // CONSTANT to prevent layout wobble
-        transform: `translate3d(0, ${entryY}px, ${entryZ}px) rotateX(${entryRotateX}deg) scale(${scale})`,
+        fontWeight: 800, // Thick for high impact
+        transform: `translate3d(${jitterX}px, ${entryY + jitterY}px, ${entryZ}px) rotateX(${entryRotateX}deg) scale(${scale})`,
         transformOrigin: 'center bottom',
-        textShadow: isCurrent
-          ? `0 0 16px rgba(212,175,55,0.7), 0 4px 12px rgba(0,0,0,0.9)`
-          : '0 3px 8px rgba(0,0,0,0.6)',
-        margin: '0 10px',
+        textShadow: textShadowStack,
+        margin: '0 12px',
         lineHeight: 1.45,
         WebkitFontSmoothing: 'antialiased',
         transformStyle: 'preserve-3d',
+        willChange: 'transform, color, text-shadow',
       }}
     >
       {word.word}
