@@ -1,16 +1,23 @@
 /**
- * EOTC Voice Studio — Netflix-Grade Video Caption Overlay
+ * EOTC Voice Studio — World-Class Video Caption Overlay
  * 
  * ═══ DESIGN PHILOSOPHY ═══
  * 
- * Inspired by Apple TV+, Netflix, and HBO Max subtitle systems.
+ * Beyond Netflix/Apple TV+ — This is CINEMATIC OVERLAY DESIGN.
  * 
- * 1. NO per-word highlighting — all words appear uniformly at full brightness
- * 2. Cinematic spring entry from below with subtle blur reveal
- * 3. Premium frosted glass pill with organic breathing
- * 4. Silky-smooth line transitions — each line dissolves out, next slides in
- * 5. Constant 700 weight, zero layout jitter, zero visual noise
- * 6. Typography: large, crisp, high-contrast with double shadow stack
+ * 1. FLUID GHOSTING TRANSITIONS — Text leaves a motion-blurred
+ *    "trail" as it enters/exits, simulating cinema camera motion blur
+ * 
+ * 2. DYNAMIC SEARCHLIGHT — A golden specular "sheen" sweeps
+ *    across the text left-to-right as the line is being spoken
+ * 
+ * 3. PARALLAX DEPTH — Captions float in 3D space with subtle
+ *    perspective offset, creating depth against the video
+ * 
+ * 4. ADAPTIVE FROSTED GLASS — Premium glassmorphism with
+ *    breathing inner glow and organic edge softness
+ * 
+ * 5. ZERO per-word highlighting — uniform professional text
  */
 import React, { useMemo } from 'react';
 import {
@@ -56,19 +63,21 @@ function groupWordsIntoLines(words, max) {
 }
 
 /* ═══════════════════════════════════════════════
-   CAPTION LINE — Netflix-Grade Subtitle Block
+   WORLD-CLASS CAPTION LINE
    
-   NO per-word highlighting.
-   The entire line appears as one solid, uniform,
-   perfectly legible block of text.
+   Features:
+   - Fluid ghosting transitions (motion blur trail)
+   - Dynamic searchlight sweep (golden sheen)
+   - Parallax depth (3D floating)
+   - Adaptive frosted glass pill
    ═══════════════════════════════════════════════ */
-const CaptionLine = ({ line, fps }) => {
+const CaptionLine = ({ line, fps, lineIndex, seqStartFrame }) => {
   const frame = useCurrentFrame();
   const { fps: configFps } = useVideoConfig();
+  const globalFrame = seqStartFrame + frame;
   const pageDurFrames = Math.ceil((line.end - line.start) * fps);
 
-  // ── ENTRY: Cinematic spring slide-up ──
-  // Tight, critically-damped spring — zero bounce, pure silk
+  // ── ENTRY: Critically-damped spring slide-up ──
   const enterSpring = spring({
     frame,
     fps: configFps,
@@ -77,11 +86,11 @@ const CaptionLine = ({ line, fps }) => {
   });
 
   const entryOpacity = interpolate(enterSpring, [0, 1], [0, 1]);
-  const entryY = interpolate(enterSpring, [0, 1], [18, 0]);
-  const entryBlur = interpolate(enterSpring, [0, 1], [4, 0]); // Subtle blur reveal
-  const entryScale = interpolate(enterSpring, [0, 1], [0.96, 1.0]);
+  const entryY = interpolate(enterSpring, [0, 1], [22, 0]);
+  const entryBlur = interpolate(enterSpring, [0, 1], [6, 0]);
+  const entryScale = interpolate(enterSpring, [0, 1], [0.94, 1.0]);
 
-  // ── EXIT: Smooth dissolve upward ──
+  // ── EXIT: Smooth dissolve upward with ghost trail ──
   const exitStart = pageDurFrames + 2;
   const exitProgress = interpolate(
     frame,
@@ -94,33 +103,109 @@ const CaptionLine = ({ line, fps }) => {
     }
   );
   const exitOpacity = 1 - exitProgress;
-  const exitY = interpolate(exitProgress, [0, 1], [0, -8]);
-  const exitScale = interpolate(exitProgress, [0, 1], [1.0, 1.02]);
+  const exitY = interpolate(exitProgress, [0, 1], [0, -12]);
+  const exitScale = interpolate(exitProgress, [0, 1], [1.0, 1.03]);
+  // Ghost trail blur on exit (simulates motion blur)
+  const exitBlur = interpolate(exitProgress, [0, 0.3, 1], [0, 0, 5]);
 
   const totalOpacity = entryOpacity * exitOpacity;
   if (totalOpacity < 0.01) return null;
 
   const totalY = entryY + exitY;
   const totalScale = entryScale * exitScale;
+  const totalBlur = entryBlur + exitBlur;
+
+  // ── DYNAMIC SEARCHLIGHT SWEEP ──
+  // A golden specular "sheen" that sweeps left-to-right as the line is spoken
+  const lineProgress = interpolate(
+    frame,
+    [0, pageDurFrames],
+    [0, 1],
+    { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }
+  );
+  // Searchlight position: -20% to 120% of the pill width
+  const searchlightX = interpolate(lineProgress, [0, 1], [-20, 120]);
+  const searchlightIntensity = interpolate(
+    lineProgress, [0, 0.05, 0.5, 0.95, 1], [0, 0.6, 0.8, 0.6, 0]
+  );
+
+  // ── PARALLAX DEPTH ──
+  // Subtle 3D floating — captions shift slightly opposite to a simulated camera pan
+  const parallaxX = Math.sin(globalFrame * 0.008) * 2.5;
+  const parallaxY = Math.cos(globalFrame * 0.006) * 1.5;
+  // Micro perspective tilt for depth
+  const perspTiltX = Math.sin(globalFrame * 0.005) * 0.4;
+  const perspTiltY = Math.cos(globalFrame * 0.007) * 0.3;
+
+  // ── ORGANIC BREATHING ──
+  // Very slow, barely perceptible scale pulse
+  const breathScale = interpolate(
+    Math.sin(frame * 0.025), [-1, 1], [0.998, 1.002]
+  );
 
   return (
-    <AbsoluteFill style={{ pointerEvents: 'none' }}>
+    <AbsoluteFill style={{ pointerEvents: 'none', perspective: '1200px' }}>
 
       {/* ── CINEMATIC BOTTOM GRADIENT ──
-          Deep, smooth gradient that makes text pop on ANY video content */}
+          Multi-layered for maximum depth */}
       <div
         style={{
           position: 'absolute',
           bottom: 0,
           left: 0,
           right: 0,
-          height: '40%',
-          background: 'linear-gradient(0deg, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.5) 40%, rgba(0,0,0,0.15) 70%, transparent 100%)',
+          height: '45%',
+          background: `
+            linear-gradient(0deg, 
+              rgba(0,0,0,0.88) 0%, 
+              rgba(0,0,0,0.6) 30%, 
+              rgba(0,0,0,0.25) 55%, 
+              rgba(0,0,0,0.08) 75%, 
+              transparent 100%
+            )
+          `,
           opacity: totalOpacity,
         }}
       />
 
-      {/* ── PERFECT CENTER CONTAINER ── */}
+      {/* ── GHOST TRAIL LAYER ──
+          A faint, blurred duplicate that lingers during exit */}
+      {exitProgress > 0.01 && exitProgress < 0.95 && (
+        <div
+          style={{
+            position: 'absolute',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            height: '22%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            opacity: totalOpacity * 0.35 * (1 - exitProgress),
+            transform: `translateY(${totalY + 4}px) scale(${totalScale * 0.99})`,
+            filter: `blur(${8 + exitProgress * 6}px)`,
+          }}
+        >
+          <div style={{
+            padding: '18px 36px',
+            borderRadius: 20,
+            maxWidth: '90%',
+          }}>
+            <span style={{
+              color: 'rgba(255, 255, 255, 0.6)',
+              fontSize: FONT_SIZE,
+              fontFamily: theme.fonts.caption,
+              fontWeight: 700,
+              textAlign: 'center',
+              lineHeight: LINE_HEIGHT,
+            }}>
+              {line.text}
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* ── PERFECT CENTER CONTAINER WITH PARALLAX ── */}
       <div
         style={{
           position: 'absolute',
@@ -132,37 +217,88 @@ const CaptionLine = ({ line, fps }) => {
           alignItems: 'center',
           justifyContent: 'center',
           opacity: totalOpacity,
-          transform: `translateY(${totalY}px) scale(${totalScale})`,
-          filter: entryBlur > 0.1 ? `blur(${entryBlur}px)` : 'none',
+          transform: `
+            translateX(${parallaxX}px)
+            translateY(${totalY + parallaxY}px) 
+            scale(${totalScale * breathScale}) 
+            rotateX(${perspTiltX}deg) 
+            rotateY(${perspTiltY}deg)
+          `,
+          filter: totalBlur > 0.1 ? `blur(${totalBlur}px)` : 'none',
           willChange: 'transform, opacity, filter',
+          transformStyle: 'preserve-3d',
         }}
       >
-        {/* ── FROSTED GLASS PILL ──
-            Apple-style glassmorphism with organic inner glow */}
+        {/* ── PREMIUM FROSTED GLASS PILL ── */}
         <div
           style={{
+            position: 'relative',
             display: 'flex',
             flexWrap: 'wrap',
             alignItems: 'center',
             justifyContent: 'center',
             gap: '0 14px',
-            padding: '18px 36px',
-            borderRadius: 20,
-            background: 'rgba(10, 10, 10, 0.5)',
-            backdropFilter: 'blur(16px) saturate(160%)',
-            WebkitBackdropFilter: 'blur(16px) saturate(160%)',
-            border: '1px solid rgba(255, 255, 255, 0.06)',
+            padding: '20px 40px',
+            borderRadius: 22,
+            background: 'rgba(8, 8, 8, 0.52)',
+            backdropFilter: 'blur(20px) saturate(170%)',
+            WebkitBackdropFilter: 'blur(20px) saturate(170%)',
+            border: '1px solid rgba(255, 255, 255, 0.07)',
             boxShadow: `
-              0 16px 48px rgba(0, 0, 0, 0.6),
-              0 4px 12px rgba(0, 0, 0, 0.4),
-              inset 0 1px 0 rgba(255, 255, 255, 0.04)
+              0 20px 60px rgba(0, 0, 0, 0.65),
+              0 6px 16px rgba(0, 0, 0, 0.45),
+              inset 0 1px 0 rgba(255, 255, 255, 0.05),
+              inset 0 -1px 0 rgba(0, 0, 0, 0.2)
             `,
             maxWidth: '90%',
+            overflow: 'hidden',
           }}
         >
-          {/* ── UNIFORM TEXT — No highlighting, every word identical ── */}
+          {/* ── SEARCHLIGHT SWEEP ──
+              A golden specular sheen that moves across the pill */}
+          <div
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: `${searchlightX}%`,
+              width: '25%',
+              height: '100%',
+              background: `linear-gradient(90deg, 
+                transparent 0%, 
+                rgba(212, 175, 55, ${0.06 * searchlightIntensity}) 30%, 
+                rgba(255, 248, 225, ${0.10 * searchlightIntensity}) 50%, 
+                rgba(212, 175, 55, ${0.06 * searchlightIntensity}) 70%, 
+                transparent 100%
+              )`,
+              pointerEvents: 'none',
+              filter: 'blur(8px)',
+            }}
+          />
+
+          {/* ── TOP EDGE HIGHLIGHT ──
+              Simulates light catching the top edge of the glass */}
+          <div
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: '10%',
+              right: '10%',
+              height: '1px',
+              background: `linear-gradient(90deg, 
+                transparent 0%, 
+                rgba(255, 255, 255, 0.12) 30%, 
+                rgba(255, 255, 255, 0.18) 50%, 
+                rgba(255, 255, 255, 0.12) 70%, 
+                transparent 100%
+              )`,
+            }}
+          />
+
+          {/* ── UNIFORM TEXT ── */}
           <span
             style={{
+              position: 'relative',
+              zIndex: 2,
               color: 'rgba(255, 255, 255, 0.97)',
               fontSize: FONT_SIZE,
               fontFamily: theme.fonts.caption,
@@ -173,9 +309,9 @@ const CaptionLine = ({ line, fps }) => {
               textShadow: `
                 0 2px 6px rgba(0, 0, 0, 0.95),
                 0 0 2px rgba(0, 0, 0, 0.9),
-                0 8px 20px rgba(0, 0, 0, 0.4)
+                0 8px 24px rgba(0, 0, 0, 0.5)
               `,
-              WebkitTextStroke: '1px rgba(0, 0, 0, 0.3)',
+              WebkitTextStroke: '0.8px rgba(0, 0, 0, 0.25)',
               paintOrder: 'stroke fill',
               WebkitFontSmoothing: 'antialiased',
               MozOsxFontSmoothing: 'grayscale',
@@ -213,7 +349,12 @@ export const VideoCaptionOverlay = ({ words = [] }) => {
             from={Math.max(0, startFrame)}
             durationInFrames={duration}
           >
-            <CaptionLine line={line} fps={fps} />
+            <CaptionLine
+              line={line}
+              fps={fps}
+              lineIndex={i}
+              seqStartFrame={Math.max(0, startFrame)}
+            />
           </Sequence>
         );
       })}

@@ -1,5 +1,5 @@
 /**
- * EOTC Voice Studio — Subtle God-Rays
+ * EOTC Voice Studio — Volumetric Light Rays
  * 
  * Barely perceptible volumetric light.
  * Adds sacred atmosphere without competing.

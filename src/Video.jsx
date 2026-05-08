@@ -182,7 +182,7 @@ export const EOTCVideo = ({
       {words.length > 0 && (
         <Sequence durationInFrames={durationInFrames} layout="none">
           <AbsoluteFill style={{ transform: fgTransform, willChange: 'transform' }}>
-            <CaptionOverlay words={words} introFrames={introFrames} />
+            <CaptionOverlay words={words} introFrames={introFrames} audioPulse={audioPulse} />
           </AbsoluteFill>
         </Sequence>
       )}
@@ -197,14 +197,23 @@ export const EOTCVideo = ({
 
       <Sequence durationInFrames={durationInFrames}>
         <AbsoluteFill style={{ pointerEvents: 'none', zIndex: 15 }}>
+          {/* 35mm Film Grain */}
           <div style={{
             position: 'absolute', inset: 0, opacity: theme.bg.grainOpacity,
             backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E")`,
             backgroundSize: theme.bg.grainScale, mixBlendMode: 'overlay',
           }} />
+          {/* Breathing Vignette */}
           <div style={{
             position: 'absolute', inset: 0,
             background: `radial-gradient(ellipse 55% 42% at 50% 50%, transparent 10%, rgba(0,0,0,${interpolate(Math.sin(frame * 0.008), [-1, 1], [0.42, 0.52])}) 100%)`,
+          }} />
+          {/* Film Halation — warm red glow on bright edges (vintage film look) */}
+          <div style={{
+            position: 'absolute', inset: 0,
+            background: `radial-gradient(ellipse 40% 35% at 50% 48%, rgba(180, 60, 30, 0.04) 0%, transparent 70%)`,
+            mixBlendMode: 'screen',
+            opacity: 0.6 + audioPulse * 0.4,
           }} />
         </AbsoluteFill>
       </Sequence>
