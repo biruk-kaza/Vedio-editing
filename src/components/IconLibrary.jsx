@@ -29,7 +29,7 @@ const ICON_PATHS = {
       'M 20 32 L 76 32', // horizontal
     ],
     viewBox: '0 0 96 100',
-    strokeWidth: 7,
+    strokeWidth: 9,
     totalLength: 140,
   },
   book: {
@@ -41,7 +41,7 @@ const ICON_PATHS = {
       'M 84 20 L 84 78 C 84 78, 68 74, 48 80',
     ],
     viewBox: '0 0 96 96',
-    strokeWidth: 5,
+    strokeWidth: 7,
     totalLength: 320,
   },
   dove: {
@@ -51,7 +51,7 @@ const ICON_PATHS = {
       'M 20 60 L 8 72', // tail
     ],
     viewBox: '0 0 96 96',
-    strokeWidth: 5,
+    strokeWidth: 7,
     totalLength: 250,
   },
   candle: {
@@ -62,7 +62,7 @@ const ICON_PATHS = {
       'M 48 38 Q 40 20, 48 8 Q 56 20, 48 38', // flame
     ],
     viewBox: '0 0 96 96',
-    strokeWidth: 5.5,
+    strokeWidth: 7.5,
     totalLength: 180,
   },
   church: {
@@ -74,7 +74,7 @@ const ICON_PATHS = {
       'M 42 82 L 42 62 L 54 62 L 54 82', // door
     ],
     viewBox: '0 0 96 96',
-    strokeWidth: 5,
+    strokeWidth: 7,
     totalLength: 300,
   },
   prayer: {
@@ -84,7 +84,7 @@ const ICON_PATHS = {
       'M 44 35 Q 48 25, 52 35', // fingertips
     ],
     viewBox: '0 0 96 96',
-    strokeWidth: 5.5,
+    strokeWidth: 7.5,
     totalLength: 160,
   },
   sun: {
@@ -96,7 +96,7 @@ const ICON_PATHS = {
       'M 70 26 L 62 34', 'M 34 62 L 26 70', // diagonal
     ],
     viewBox: '0 0 96 96',
-    strokeWidth: 5,
+    strokeWidth: 7,
     totalLength: 280,
   },
   bell: {
@@ -107,7 +107,7 @@ const ICON_PATHS = {
       'M 44 62 Q 44 72, 48 74 Q 52 72, 52 62', // clapper
     ],
     viewBox: '0 0 96 96',
-    strokeWidth: 5.5,
+    strokeWidth: 7.5,
     totalLength: 220,
   },
 };
@@ -145,18 +145,22 @@ export const GlowIcon = ({ iconName = 'cross', size = 80, delay = 0, isActive = 
     config: { damping: 14, stiffness: 120, mass: 0.5 },
   });
   
-  // ── REACTIVE BUMP ──
-  // This spring activates whenever isActive flips to true
+  // ── REACTIVE BUMP (TIKTOK PUNCH) ──
   const activeSpring = spring({
-    frame: isActive ? local % 1000 : 0, // Reset logic would be complex, let's keep it simple
+    frame: isActive ? local % 1000 : 0, 
     fps,
-    config: { damping: 12, stiffness: 200, mass: 0.3 },
+    config: { damping: 10, stiffness: 300, mass: 0.4 }, // Snappier
   });
   
-  const iconScale = interpolate(scaleSpring, [0, 1], [0.6, 1.0]) * (isActive ? 1.12 : 1.0);
+  const iconScale = interpolate(scaleSpring, [0, 1], [0.6, 1.0]) * (isActive ? 1.3 : 1.0); // Bigger punch
   const breath = interpolate(Math.sin(local * 0.04), [-1, 1], [0.97, 1.03]);
   const opacity = interpolate(local, [0, 5], [0, 1], { extrapolateLeft: 'clamp' });
-  const glowRadius = interpolate(glowProgress, [0, 1], [0, 35]) + (isActive ? 25 : 0);
+  const glowRadius = interpolate(glowProgress, [0, 1], [0, 45]) + (isActive ? 40 : 0); // Brighter glow
+
+  // Continuous 3D rotation
+  const rotateY = local * 0.5; // Constant slow spin
+  const activeTilt = isActive ? Math.sin(local * 0.3) * 20 : 0; // Extra erratic tilt when active
+
 
   // Specular leading edge brightness
   const specularIntensity = interpolate(drawProgress, [0, 0.5, 0.9, 1], [0, 1, 0.6, 0.3]);
@@ -167,7 +171,7 @@ export const GlowIcon = ({ iconName = 'cross', size = 80, delay = 0, isActive = 
     <div style={{
       width: size, height: size,
       opacity,
-      transform: `scale(${iconScale * breath}) rotateY(${isActive ? Math.sin(local * 0.1) * 15 : 0}deg)`,
+      transform: `scale(${iconScale * breath}) rotateY(${rotateY + activeTilt}deg) rotateZ(${isActive ? -5 : 0}deg)`,
       filter: `drop-shadow(0 0 ${glowRadius}px ${theme.gold.glow})`,
       willChange: 'transform, opacity, filter',
       mixBlendMode: 'screen',
@@ -185,7 +189,7 @@ export const GlowIcon = ({ iconName = 'cross', size = 80, delay = 0, isActive = 
             key={`glow-${i}`}
             d={d}
             stroke={theme.gold.glowStrong}
-            strokeWidth={iconData.strokeWidth + 4}
+            strokeWidth={iconData.strokeWidth + 6}
             strokeLinecap="round"
             strokeLinejoin="round"
             fill="none"

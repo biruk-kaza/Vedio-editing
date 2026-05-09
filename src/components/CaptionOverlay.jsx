@@ -109,11 +109,20 @@ const SmoothWord = ({ word, wi, globalFrame, fps, fontSize, localFrame, audioPul
 
   const activeBump = Math.max(0, popSpring - downSpring);
 
-  // ── FLUID STRETCH PHYSICS (RUBBER-BAND) ──
-  // When active, the word stretches vertically then snaps back
-  const stretchY = 1.0 + activeBump * 0.15; // 15% vertical stretch
-  const squashX = 1.0 - activeBump * 0.04;  // 4% horizontal squash (volume preservation)
-  const baseScale = 1.0 + activeBump * 0.06; // 6% overall scale pop
+  // ── FLUID STRETCH PHYSICS (RUBBER-BAND) & TIKTOK PUNCH ──
+  // Dramatic scale up for active word, push back for inactive
+  const stretchY = 1.0 + activeBump * 0.25; // More vertical stretch
+  const squashX = 1.0 - activeBump * 0.08;  // More horizontal squash
+  
+  // Base scale: active word pops HUGE (1.25x), inactive words shrink slightly (0.9x)
+  const baseScale = isCurrent ? 1.0 + activeBump * 0.25 : (isPast ? 0.9 : 0.85);
+  
+  // Z-depth: active word pushes forward, inactive fall back
+  const wordZ = isCurrent ? activeBump * 50 : (isPast ? -30 : -50);
+
+  // Dynamic energetic rotation (alternates slightly based on index)
+  const rotationPunch = isCurrent ? activeBump * (wi % 2 === 0 ? 4 : -4) : 0;
+
 
   // ── CHROMATIC ABERRATION ──
   const aberration = activeBump * 2.5;
@@ -124,10 +133,10 @@ const SmoothWord = ({ word, wi, globalFrame, fps, fontSize, localFrame, audioPul
   const jitterX = isCurrent ? noise(globalFrame * 0.8 + wi) * 0.7 : 0;
   const jitterY = isCurrent ? noise(globalFrame * 0.7 + wi * 3) * 0.7 : 0;
 
-  // Active color (Golden pop with warm tone)
+  // Active color (Golden pop with very bright warm tone)
   const r = 255;
-  const g = isCurrent ? 215 : 255;
-  const b = isCurrent ? 140 : 255;
+  const g = isCurrent ? 230 : 255;
+  const b = isCurrent ? 120 : 255;
 
   // ── AUDIO-REACTIVE GLOW ──
   const audioGlow = (audioPulse || 0) * (isCurrent ? 1.0 : 0.3);
@@ -160,8 +169,9 @@ const SmoothWord = ({ word, wi, globalFrame, fps, fontSize, localFrame, audioPul
         fontFamily: theme.fonts.caption,
         fontWeight: 800,
         transform: `
-          translate3d(${jitterX}px, ${entryY + jitterY}px, ${entryZ}px) 
+          translate3d(${jitterX}px, ${entryY + jitterY}px, ${entryZ + wordZ}px) 
           rotateX(${entryRotateX}deg) 
+          rotateZ(${rotationPunch}deg)
           scaleX(${squashX * baseScale}) 
           scaleY(${stretchY * baseScale})
         `,
@@ -236,10 +246,10 @@ const CaptionPage = ({ line, lineIdx, fps, seqStartFrame, audioPulse }) => {
 
   if (totalOpacity < 0.01) return null;
 
-  // ── GATE WEAVE (Vintage Film) ──
-  // Subtle random frame-to-frame position shift
-  const gateWeaveX = noise(globalFrame * 1.1) * 1.2;
-  const gateWeaveY = noise(globalFrame * 0.9 + 100) * 0.8;
+  // ── GATE WEAVE (REMOVED AS PER REQUEST) ──
+  // Subtle random frame-to-frame position shift removed for cleaner look
+  const gateWeaveX = 0;
+  const gateWeaveY = 0;
 
   // ── REACTIVE ICON LOGIC ──
   const absoluteTimeSec = globalFrame / fps;
