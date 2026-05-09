@@ -40,10 +40,10 @@ function noise(seed) {
 // ═══ ICON COMPOSITIONS ═══
 const COMPOSITIONS = [
   { name: 'ICON_ABOVE', iconPos: 'above', iconSize: 80 },
-  { name: 'ICON_LEFT',  iconPos: 'left',  iconSize: 70 },
+  { name: 'ICON_LEFT', iconPos: 'left', iconSize: 70 },
   { name: 'ICON_RIGHT', iconPos: 'right', iconSize: 70 },
   { name: 'ICON_BELOW', iconPos: 'below', iconSize: 75 },
-  { name: 'ICON_BG',    iconPos: 'behind', iconSize: 150 },
+  { name: 'ICON_BG', iconPos: 'behind', iconSize: 150 },
 ];
 
 function groupWordsIntoLines(words, max) {
@@ -83,7 +83,7 @@ const SmoothWord = ({ word, wi, globalFrame, fps, fontSize, localFrame, audioPul
 
   // Clean opacity states
   const opacity = isCurrent ? 1.0 : (isPast ? 0.5 : 0.2);
-  
+
   // ── HIGHLIGHT SPRING ──
   const wordStartFrame = Math.round(word.start * fps);
   const framesSinceStart = globalFrame - wordStartFrame;
@@ -116,9 +116,9 @@ const SmoothWord = ({ word, wi, globalFrame, fps, fontSize, localFrame, audioPul
   const jitterY = isCurrent ? noise(globalFrame * 0.5 + wi * 3) * 0.4 : 0;
 
   // Color: Pure white when active, warm white when past, dim when future
-  const color = isCurrent 
-    ? 'rgba(255, 255, 255, 1.0)' 
-    : isPast 
+  const color = isCurrent
+    ? 'rgba(255, 255, 255, 1.0)'
+    : isPast
       ? `rgba(220, 210, 195, ${opacity})`
       : `rgba(180, 175, 165, ${opacity})`;
 
@@ -198,8 +198,8 @@ const CaptionPage = ({ line, lineIdx, fps, seqStartFrame, audioPulse }) => {
   const fontSize = wordCount <= 2
     ? Math.round(baseFontSize * 1.35)
     : wordCount <= 3
-    ? Math.round(baseFontSize * 1.12)
-    : baseFontSize;
+      ? Math.round(baseFontSize * 1.12)
+      : baseFontSize;
 
   // ── SMOOTH ENTRANCE ──
   const enterSpring = spring({
@@ -242,11 +242,11 @@ const CaptionPage = ({ line, lineIdx, fps, seqStartFrame, audioPulse }) => {
   const cathedralIntensity = isAnyWordActive ? 1.0 : 0.4;
   const flicker = 1.0 + noise(globalFrame * 1.5) * 0.04;
 
-  const iconEl = <GlowIcon 
-    iconName={iconName} 
-    size={comp.iconSize} 
-    delay={2} 
-    isActive={isAnyWordActive} 
+  const iconEl = <GlowIcon
+    iconName={iconName}
+    size={comp.iconSize}
+    delay={2}
+    isActive={isAnyWordActive}
   />;
 
   const textEl = (
@@ -390,7 +390,7 @@ const VirtualCamera = ({ words, fps, children }) => {
 
   // Gentle push (5% max zoom)
   const cameraScale = 1.0 + (localBump * 0.05);
-  
+
   // Very soft tilt
   const tiltDir = activeWordIndex % 2 === 0 ? 1 : -1;
   const cameraTiltZ = localBump * 0.6 * tiltDir;
@@ -439,11 +439,11 @@ export const CaptionOverlay = ({ words = [], introFrames = 0, audioPulse = 0 }) 
               from={Math.max(0, startFrame)}
               durationInFrames={duration}
             >
-              <CaptionPage 
-                line={line} 
-                lineIdx={i} 
-                fps={fps} 
-                seqStartFrame={Math.max(0, startFrame)} 
+              <CaptionPage
+                line={line}
+                lineIdx={i}
+                fps={fps}
+                seqStartFrame={Math.max(0, startFrame)}
                 audioPulse={audioPulse}
               />
             </Sequence>

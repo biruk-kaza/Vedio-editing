@@ -196,12 +196,12 @@ export const GlowIcon = ({ iconName = 'cross', size = 80, delay = 0, isActive = 
   // ── SMOOTH REACTIVE SCALE (no wobble) ──
   const activeScale = isActive ? 1.18 : 1.0; // Clean scale up
   const iconScale = interpolate(scaleSpring, [0, 1], [0.4, 1.0]) * activeScale;
-  
+
   // Gentle breathing (very subtle)
   const breath = interpolate(Math.sin(local * 0.03), [-1, 1], [0.98, 1.02]);
-  
+
   const opacity = interpolate(local, [0, 5], [0, 1], { extrapolateLeft: 'clamp' });
-  
+
   // ── MULTI-LAYERED GLOW ──
   const baseGlow = interpolate(fillProgress, [0, 1], [0, 20]);
   const activeGlow = isActive ? 35 : 0;

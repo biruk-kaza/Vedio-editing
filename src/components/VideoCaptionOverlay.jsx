@@ -97,12 +97,12 @@ const HighlightWord = ({ word, globalFrame, fps, wordIndex }) => {
 
   // Scale: subtle pop on active word
   const scale = 1.0 + activeBump * 0.06;
-  
+
   // Opacity states
   const opacity = isCurrent ? 1.0 : (isPast ? 0.7 : 0.35);
-  
+
   // Text shadow: clean white glow on active
-  const textShadow = isCurrent 
+  const textShadow = isCurrent
     ? `0 0 ${8 + activeBump * 12}px rgba(255, 255, 255, ${0.4 + activeBump * 0.4}), 0 2px 8px rgba(0,0,0,0.9)`
     : '0 2px 6px rgba(0,0,0,0.8)';
 
@@ -348,11 +348,11 @@ const CaptionLine = ({ line, fps, lineIndex, seqStartFrame }) => {
             }}
           >
             {line.words.map((w, i) => (
-              <HighlightWord 
-                key={i} 
-                word={w} 
-                globalFrame={globalFrame} 
-                fps={fps} 
+              <HighlightWord
+                key={i}
+                word={w}
+                globalFrame={globalFrame}
+                fps={fps}
                 wordIndex={i}
               />
             ))}
