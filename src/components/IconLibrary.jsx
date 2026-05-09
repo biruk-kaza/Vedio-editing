@@ -287,7 +287,7 @@ export const GlowIcon = ({ iconName = 'cross', size = 80, delay = 0, isActive = 
             key={`fill-${i}`}
             d={d}
             fill={`url(#goldFill-${iconName})`}
-            opacity={fillProgress * 0.15}
+            opacity={fillProgress * 0.3}
             stroke="none"
           />
         ))}
@@ -337,7 +337,7 @@ export const GlowIcon = ({ iconName = 'cross', size = 80, delay = 0, isActive = 
             strokeLinecap="round"
             strokeLinejoin="round"
             fill="none"
-            opacity={fillProgress * 0.45}
+            opacity={fillProgress * 0.5}
             filter={`url(#glow-${iconName})`}
           />
         ))}

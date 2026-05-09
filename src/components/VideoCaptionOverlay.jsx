@@ -62,66 +62,9 @@ function groupWordsIntoLines(words, max) {
 }
 
 /* ═══════════════════════════════════════════════
-   PREMIUM HIGHLIGHT WORD
-   
-   Clean, Netflix-quality per-word illumination.
-   Active word brightens and scales up slightly.
-   Past words remain readable but dimmed.
-   Future words are barely visible.
+   No per-word component. Text is rendered as a
+   single uniform block inside CaptionLine.
    ═══════════════════════════════════════════════ */
-const HighlightWord = ({ word, globalFrame, fps, wordIndex }) => {
-  const { fps: configFps } = useVideoConfig();
-  const absoluteTimeSec = globalFrame / fps;
-  const wordEndPadded = word.end + 0.05;
-  const isCurrent = absoluteTimeSec >= word.start && absoluteTimeSec < wordEndPadded;
-  const isPast = absoluteTimeSec >= wordEndPadded;
-
-  // ── SPRING-DRIVEN HIGHLIGHT ──
-  const wordStartFrame = Math.round(word.start * fps);
-  const framesSinceStart = globalFrame - wordStartFrame;
-  const wordEndFrame = Math.round(wordEndPadded * fps);
-  const framesSinceEnd = globalFrame - wordEndFrame;
-
-  const popSpring = spring({
-    frame: framesSinceStart,
-    fps: configFps,
-    config: { damping: 16, stiffness: 220, mass: 0.4 },
-  });
-  const downSpring = spring({
-    frame: framesSinceEnd,
-    fps: configFps,
-    config: { damping: 18, stiffness: 180, mass: 0.45 },
-  });
-
-  const activeBump = Math.max(0, popSpring - downSpring);
-
-  // Scale: subtle pop on active word
-  const scale = 1.0 + activeBump * 0.06;
-
-  // Opacity states
-  const opacity = isCurrent ? 1.0 : (isPast ? 0.7 : 0.35);
-
-  // Text shadow: clean white glow on active
-  const textShadow = isCurrent
-    ? `0 0 ${8 + activeBump * 12}px rgba(255, 255, 255, ${0.4 + activeBump * 0.4}), 0 2px 8px rgba(0,0,0,0.9)`
-    : '0 2px 6px rgba(0,0,0,0.8)';
-
-  // Y-lift on active word
-  const liftY = activeBump * -2;
-
-  return (
-    <span style={{
-      display: 'inline-block',
-      color: `rgba(255, 255, 255, ${opacity})`,
-      transform: `scale(${scale}) translateY(${liftY}px)`,
-      textShadow,
-      margin: '0 7px',
-      willChange: 'transform, color, text-shadow',
-    }}>
-      {word.word}
-    </span>
-  );
-};
 
 /* ═══════════════════════════════════════════════
    CAPTION LINE — Frosted glass + searchlight
@@ -141,9 +84,8 @@ const CaptionLine = ({ line, fps, lineIndex, seqStartFrame }) => {
   });
 
   const entryOpacity = interpolate(enterSpring, [0, 1], [0, 1]);
-  const entryY = interpolate(enterSpring, [0, 1], [28, 0]);
-  const entryBlur = interpolate(enterSpring, [0, 1], [6, 0]);
-  const entryScale = interpolate(enterSpring, [0, 1], [0.92, 1.0]);
+  const entryY = interpolate(enterSpring, [0, 1], [20, 0]);
+  const entryScale = interpolate(enterSpring, [0, 1], [0.95, 1.0]);
 
   // ── EXIT: Smooth dissolve upward ──
   const exitStart = pageDurFrames + 2;
@@ -158,16 +100,14 @@ const CaptionLine = ({ line, fps, lineIndex, seqStartFrame }) => {
     }
   );
   const exitOpacity = 1 - exitProgress;
-  const exitY = interpolate(exitProgress, [0, 1], [0, -10]);
+  const exitY = interpolate(exitProgress, [0, 1], [0, -8]);
   const exitScale = interpolate(exitProgress, [0, 1], [1.0, 1.02]);
-  const exitBlur = interpolate(exitProgress, [0, 0.4, 1], [0, 0, 4]);
 
   const totalOpacity = entryOpacity * exitOpacity;
   if (totalOpacity < 0.01) return null;
 
   const totalY = entryY + exitY;
   const totalScale = entryScale * exitScale;
-  const totalBlur = entryBlur + exitBlur;
 
   // ── SEARCHLIGHT SWEEP ──
   const lineProgress = interpolate(
@@ -258,12 +198,8 @@ const CaptionLine = ({ line, fps, lineIndex, seqStartFrame }) => {
           alignItems: 'center',
           justifyContent: 'center',
           opacity: totalOpacity,
-          transform: `
-            translateY(${totalY}px) 
-            scale(${totalScale * breathScale}) 
-          `,
-          filter: totalBlur > 0.1 ? `blur(${totalBlur}px)` : 'none',
-          willChange: 'transform, opacity, filter',
+          transform: `translateY(${totalY}px) scale(${totalScale * breathScale})`,
+          willChange: 'transform, opacity',
         }}
       >
         {/* ── FROSTED GLASS PILL ── */}
@@ -329,33 +265,24 @@ const CaptionLine = ({ line, fps, lineIndex, seqStartFrame }) => {
             }}
           />
 
-          {/* ── WORDS ── */}
+          {/* ── UNIFORM TEXT ── */}
           <div
             style={{
               position: 'relative',
               zIndex: 2,
-              display: 'flex',
-              flexWrap: 'wrap',
-              justifyContent: 'center',
+              textAlign: 'center',
               fontSize: FONT_SIZE,
               fontFamily: theme.fonts.caption,
               fontWeight: 700,
-              textAlign: 'center',
               lineHeight: LINE_HEIGHT,
+              color: 'rgba(255, 255, 255, 0.95)',
+              textShadow: '0 2px 8px rgba(0, 0, 0, 0.9)',
               letterSpacing: '0.3px',
               WebkitFontSmoothing: 'antialiased',
               MozOsxFontSmoothing: 'grayscale',
             }}
           >
-            {line.words.map((w, i) => (
-              <HighlightWord
-                key={i}
-                word={w}
-                globalFrame={globalFrame}
-                fps={fps}
-                wordIndex={i}
-              />
-            ))}
+            {line.text}
           </div>
         </div>
       </div>
