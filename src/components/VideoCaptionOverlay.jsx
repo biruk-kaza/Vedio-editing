@@ -279,23 +279,24 @@ const CaptionLine = ({ line, fps, lineIndex, seqStartFrame }) => {
             overflow: 'hidden',
           }}
         >
-          {/* ── SEARCHLIGHT ── */}
+          {/* ── METALLIC OPTICAL GLARE (Searchlight) ── */}
           <div
             style={{
               position: 'absolute',
               top: 0,
               left: `${searchlightX}%`,
-              width: '20%',
+              width: '40%',
               height: '100%',
-              background: `linear-gradient(90deg, 
+              background: `linear-gradient(110deg, 
                 transparent 0%, 
-                rgba(255, 255, 255, ${0.03 * searchlightIntensity}) 30%, 
-                rgba(255, 255, 255, ${0.06 * searchlightIntensity}) 50%, 
-                rgba(255, 255, 255, ${0.03 * searchlightIntensity}) 70%, 
+                rgba(255, 255, 255, ${0.1 * searchlightIntensity}) 30%, 
+                rgba(255, 255, 255, ${0.4 * searchlightIntensity}) 50%, 
+                rgba(255, 255, 255, ${0.1 * searchlightIntensity}) 70%, 
                 transparent 100%
               )`,
               pointerEvents: 'none',
-              filter: 'blur(6px)',
+              filter: 'blur(2px)',
+              mixBlendMode: 'overlay', // Makes it react beautifully to the colors underneath
             }}
           />
 

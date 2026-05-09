@@ -26,7 +26,7 @@ import { AnimatedBackground } from './components/AnimatedBackground.jsx';
 import { ParticleField } from './components/ParticleField.jsx';
 import { LightRays } from './components/LightRays.jsx';
 import { CrossWatermark } from './components/CrossWatermark.jsx';
-import { CaptionOverlay } from './components/CaptionOverlay.jsx';
+import { CaptionOverlay, GoldenWaveform } from './components/CaptionOverlay.jsx';
 import { VideoCaptionOverlay } from './components/VideoCaptionOverlay.jsx';
 import { IntroSequence } from './components/IntroSequence.jsx';
 import { OutroSequence } from './components/OutroSequence.jsx';
@@ -106,16 +106,33 @@ export const EOTCVideo = ({
   if (isVideoMode) {
     return (
       <AbsoluteFill style={{ backgroundColor: '#000', fontFamily: ethiopicFont, overflow: 'hidden' }}>
-        {/* Full-screen clean video (no shake, no blur) */}
+        {/* Full-screen clean video */}
         <Video
           src={videoSrc}
           style={{ width: '100%', height: '100%', objectFit: 'cover' }}
         />
 
+        {/* ── CINEMATIC COLOR GRADE (LUT) ── */}
+        {/* Deepens shadows (teal), warms highlights (gold), adds subtle contrast */}
+        <AbsoluteFill style={{
+          pointerEvents: 'none',
+          background: 'linear-gradient(180deg, rgba(15, 35, 60, 0.15) 0%, rgba(212, 175, 55, 0.08) 100%)',
+          mixBlendMode: 'overlay',
+        }} />
+        
+        {/* Subtle cinematic vignette to draw eyes to the center/captions */}
+        <AbsoluteFill style={{
+          pointerEvents: 'none',
+          background: 'radial-gradient(ellipse 70% 70% at 50% 50%, transparent 40%, rgba(0, 0, 0, 0.4) 100%)',
+        }} />
+
         {/* Clean, professional bottom-third captions */}
         {words.length > 0 && (
           <VideoCaptionOverlay words={words} />
         )}
+
+        {/* Sleek Golden Audio Waveform */}
+        <GoldenWaveform audioFrequencies={audioFrequencies} />
 
         {/* Subtle progress bar */}
         {showProgressBar && (

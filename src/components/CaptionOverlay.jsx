@@ -330,7 +330,7 @@ const SteadyCamera = ({ children }) => {
 /* ═══════════════════════════════════════════════
    GOLDEN WAVEFORM — Sleek Audio Visualizer
    ═══════════════════════════════════════════════ */
-const GoldenWaveform = ({ audioFrequencies = [] }) => {
+export const GoldenWaveform = ({ audioFrequencies = [] }) => {
   // Use a subset of frequencies for a minimal, clean look
   const bars = 40;
   const step = Math.floor(audioFrequencies.length / bars) || 1;
