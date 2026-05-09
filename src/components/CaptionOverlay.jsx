@@ -28,8 +28,8 @@ import {
   Sequence,
   AbsoluteFill,
   Easing,
+  interpolateColors,
 } from 'remotion';
-import { interpolateColors } from '@remotion/colors';
 import { theme } from '../utils/theme.js';
 import { GlowIcon, IconLightCast, getIconForLine } from './IconLibrary.jsx';
 
