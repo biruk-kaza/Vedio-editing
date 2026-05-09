@@ -158,7 +158,7 @@ const CaptionPage = ({ line, lineIdx, fps, seqStartFrame, audioPulse }) => {
 
   // ── CATHEDRAL LIGHTING ──
   const cathedralIntensity = isAnyWordActive ? 1.0 : 0.4;
-  const flicker = 1.0 + noise(globalFrame * 1.5) * 0.04;
+  const flicker = 1.0 + Math.sin(globalFrame * 0.2) * 0.04;
 
   const iconEl = <GlowIcon
     iconName={iconName}
