@@ -29,6 +29,7 @@ import {
   AbsoluteFill,
   Easing,
 } from 'remotion';
+import { interpolateColors } from '@remotion/colors';
 import { theme } from '../utils/theme.js';
 import { GlowIcon, IconLightCast, getIconForLine } from './IconLibrary.jsx';
 
@@ -70,18 +71,48 @@ function groupWordsIntoLines(words, max) {
    Zero layout shift, zero wobble.
    ═══════════════════════════════════════════════ */
 const SmoothColorWord = ({ word, globalFrame, fps }) => {
+  const { fps: configFps } = useVideoConfig();
   const absoluteTimeSec = globalFrame / fps;
   const wordEndPadded = word.end + 0.05;
-  const isCurrent = absoluteTimeSec >= word.start && absoluteTimeSec < wordEndPadded;
   const isPast = absoluteTimeSec >= wordEndPadded;
 
-  // Pure color/opacity transition. No transform.
-  const opacity = isCurrent ? 1.0 : (isPast ? 0.8 : 0.3);
-  const color = isCurrent ? '#FFFFFF' : (isPast ? theme.gold.warm : '#A0A0A0');
+  // Mathematically perfect spring for the exact moment the word becomes active
+  const startFrame = Math.round(word.start * fps);
+  const endFrame = Math.round(wordEndPadded * fps);
   
-  const textShadow = isCurrent 
-    ? `0 0 15px rgba(255, 255, 255, 0.4), 0 2px 8px rgba(0,0,0,0.9)`
-    : '0 2px 6px rgba(0,0,0,0.8)';
+  // Spring to drive the color fill (0 to 1)
+  const activeSpring = spring({
+    frame: globalFrame - startFrame,
+    fps: configFps,
+    config: { damping: 20, stiffness: 180, mass: 0.5 },
+  });
+
+  // Spring to drive the fade out (0 to 1)
+  const fadeOutSpring = spring({
+    frame: globalFrame - endFrame,
+    fps: configFps,
+    config: { damping: 20, stiffness: 150, mass: 0.5 },
+  });
+
+  // Calculate exact opacity and color purely mathematically (no CSS transitions)
+  // Base state: 0.3 opacity, grey.
+  // Active state: 1.0 opacity, pure white.
+  // Past state: 0.8 opacity, warm gold.
+  
+  const opacity = interpolate(
+    activeSpring - fadeOutSpring,
+    [0, 1],
+    [isPast ? 0.8 : 0.3, 1.0]
+  );
+
+  const color = interpolateColors(
+    activeSpring - fadeOutSpring,
+    [0, 1],
+    [isPast ? theme.gold.warm : '#A0A0A0', '#FFFFFF']
+  );
+  
+  const textShadowOpacity = interpolate(activeSpring - fadeOutSpring, [0, 1], [0, 0.4]);
+  const textShadow = `0 0 15px rgba(255, 255, 255, ${textShadowOpacity}), 0 2px 8px rgba(0,0,0,0.9)`;
 
   return (
     <span style={{
@@ -90,8 +121,7 @@ const SmoothColorWord = ({ word, globalFrame, fps }) => {
       opacity,
       textShadow,
       margin: '0 8px',
-      transition: 'color 0.1s ease, opacity 0.1s ease',
-      willChange: 'color, opacity',
+      willChange: 'color, opacity, text-shadow',
     }}>
       {word.word}
     </span>

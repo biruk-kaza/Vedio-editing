@@ -34,12 +34,10 @@ const ICON_PATHS = {
     paths: [
       'M 48 5 L 48 95',           // vertical beam
       'M 22 28 L 74 28',           // horizontal beam
-      'M 36 16 L 60 16',           // top crossbar
     ],
     fillPaths: [
       'M 44 5 L 52 5 L 52 95 L 44 95 Z',
       'M 22 24 L 74 24 L 74 32 L 22 32 Z',
-      'M 36 12 L 60 12 L 60 20 L 36 20 Z',
     ],
     viewBox: '0 0 96 100',
     strokeWidth: 4,
