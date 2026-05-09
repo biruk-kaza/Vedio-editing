@@ -1,15 +1,21 @@
 /**
- * EOTC Voice Studio — Liturgical Icon Library
+ * EOTC Voice Studio — Premium Liturgical Icon Library
  * 
- * Minimalist gold vector icons for EOTC liturgical storytelling.
- * Each icon supports path-tracing "draw-on" reveal animation
- * using SVG stroke-dashoffset driven by interpolate().
+ * ═══ DESIGN PRINCIPLES ═══
  * 
- * The draw-on effect: gold outline traces itself with a bright
- * leading edge, then settles into soft luminescent fill.
+ * 1. DETAILED FILLED ICONS — Not wireframes. Each icon has
+ *    both stroke outlines AND warm golden fill that fades in
+ *    after the draw-on completes. Feels solid and premium.
  * 
- * Interactive lighting: each icon emits a glow that can
- * cast subtle highlights on nearby text.
+ * 2. SMOOTH REACTIVE ANIMATION — No erratic wobbling. When
+ *    active, icons scale up smoothly with a golden pulse ring
+ *    that radiates outward, then the icon settles back.
+ * 
+ * 3. MULTI-LAYERED GLOW — Three layers: deep warm glow,
+ *    mid-range golden aura, and specular white highlight.
+ * 
+ * 4. CINEMATIC DRAW-ON — Path traces itself with a bright
+ *    white leading edge, then golden fill blooms inward.
  */
 import React from 'react';
 import {
@@ -21,104 +27,144 @@ import {
 } from 'remotion';
 import { theme } from '../utils/theme.js';
 
-// ── SVG Path data for each icon ──
+// ═══ DETAILED SVG ICONS (Filled + Stroked) ═══
 const ICON_PATHS = {
   cross: {
+    // Ethiopian Orthodox processional cross
     paths: [
-      'M 48 8 L 48 92', // vertical
-      'M 20 32 L 76 32', // horizontal
+      'M 48 5 L 48 95',           // vertical beam
+      'M 22 28 L 74 28',           // horizontal beam
+      'M 36 16 L 60 16',           // top crossbar
+    ],
+    fillPaths: [
+      'M 44 5 L 52 5 L 52 95 L 44 95 Z',
+      'M 22 24 L 74 24 L 74 32 L 22 32 Z',
+      'M 36 12 L 60 12 L 60 20 L 36 20 Z',
     ],
     viewBox: '0 0 96 100',
-    strokeWidth: 9,
-    totalLength: 140,
+    strokeWidth: 4,
+    totalLength: 200,
   },
   book: {
+    // Open scripture
     paths: [
-      'M 12 20 C 12 12, 28 12, 48 18',
-      'M 84 20 C 84 12, 68 12, 48 18',
-      'M 48 18 L 48 85',
-      'M 12 20 L 12 78 C 12 78, 28 74, 48 80',
-      'M 84 20 L 84 78 C 84 78, 68 74, 48 80',
+      'M 10 18 C 10 10, 30 10, 48 16',
+      'M 86 18 C 86 10, 66 10, 48 16',
+      'M 48 16 L 48 82',
+      'M 10 18 L 10 76 C 10 76, 30 72, 48 78',
+      'M 86 18 L 86 76 C 86 76, 66 72, 48 78',
+    ],
+    fillPaths: [
+      'M 10 18 C 10 10, 30 10, 48 16 L 48 78 C 30 72, 10 76, 10 76 Z',
+      'M 86 18 C 86 10, 66 10, 48 16 L 48 78 C 66 72, 86 76, 86 76 Z',
     ],
     viewBox: '0 0 96 96',
-    strokeWidth: 7,
-    totalLength: 320,
+    strokeWidth: 3.5,
+    totalLength: 340,
   },
   dove: {
+    // Holy Spirit dove
     paths: [
-      'M 20 60 Q 30 20, 55 30 Q 80 40, 75 55 Q 70 70, 48 65 Q 25 60, 20 60 Z',
-      'M 55 30 Q 65 15, 78 22', // wing tip
-      'M 20 60 L 8 72', // tail
+      'M 18 55 Q 28 18, 55 28 Q 82 38, 76 55 Q 70 72, 48 65 Q 23 58, 18 55 Z',
+      'M 55 28 Q 68 10, 82 18',
+      'M 18 55 L 6 68',
+    ],
+    fillPaths: [
+      'M 18 55 Q 28 18, 55 28 Q 82 38, 76 55 Q 70 72, 48 65 Q 23 58, 18 55 Z',
     ],
     viewBox: '0 0 96 96',
-    strokeWidth: 7,
-    totalLength: 250,
+    strokeWidth: 3.5,
+    totalLength: 260,
   },
   candle: {
+    // Liturgical candle with flame
     paths: [
-      'M 48 38 L 48 85', // body
-      'M 36 85 L 60 85', // base
-      'M 36 38 L 60 38', // top
-      'M 48 38 Q 40 20, 48 8 Q 56 20, 48 38', // flame
+      'M 42 40 L 42 82 L 54 82 L 54 40',
+      'M 34 82 L 62 82',
+      'M 42 40 L 54 40',
+      'M 48 40 Q 38 22, 48 6 Q 58 22, 48 40',
+    ],
+    fillPaths: [
+      'M 42 40 L 42 82 L 54 82 L 54 40 Z',
+      'M 48 40 Q 38 22, 48 6 Q 58 22, 48 40 Z',
     ],
     viewBox: '0 0 96 96',
-    strokeWidth: 7.5,
-    totalLength: 180,
+    strokeWidth: 3.5,
+    totalLength: 200,
   },
   church: {
+    // Ethiopian church with dome
     paths: [
-      'M 48 10 L 48 30', // spire
-      'M 40 30 L 56 30', // cross bar
-      'M 20 40 L 48 25 L 76 40', // roof
-      'M 24 40 L 24 82 L 72 82 L 72 40', // walls
-      'M 42 82 L 42 62 L 54 62 L 54 82', // door
+      'M 48 8 L 48 22',
+      'M 40 22 L 56 22',
+      'M 18 42 L 48 20 L 78 42',
+      'M 22 42 L 22 85 L 74 85 L 74 42',
+      'M 40 85 L 40 62 L 56 62 L 56 85',
+      'M 48 42 A 12 12 0 1 0 48 66',
+    ],
+    fillPaths: [
+      'M 18 42 L 48 20 L 78 42 Z',
+      'M 22 42 L 22 85 L 74 85 L 74 42 Z',
     ],
     viewBox: '0 0 96 96',
-    strokeWidth: 7,
-    totalLength: 300,
+    strokeWidth: 3.5,
+    totalLength: 350,
   },
   prayer: {
+    // Praying hands
     paths: [
-      'M 38 80 Q 38 50, 48 35 Q 58 50, 58 80', // hands
-      'M 38 55 Q 48 45, 58 55', // fingers
-      'M 44 35 Q 48 25, 52 35', // fingertips
+      'M 36 78 Q 36 50, 48 32 Q 60 50, 60 78',
+      'M 36 52 Q 48 42, 60 52',
+      'M 42 32 Q 48 20, 54 32',
+    ],
+    fillPaths: [
+      'M 36 78 Q 36 50, 48 32 Q 60 50, 60 78 Z',
     ],
     viewBox: '0 0 96 96',
-    strokeWidth: 7.5,
-    totalLength: 160,
+    strokeWidth: 3.5,
+    totalLength: 180,
   },
   sun: {
+    // Morning star / glory
     paths: [
-      'M 48 30 A 18 18 0 1 0 48 66 A 18 18 0 1 0 48 30', // circle
-      'M 48 8 L 48 20', 'M 48 76 L 48 88', // vertical rays
-      'M 18 48 L 8 48', 'M 88 48 L 78 48', // horizontal rays
-      'M 26 26 L 34 34', 'M 62 62 L 70 70', // diagonal
-      'M 70 26 L 62 34', 'M 34 62 L 26 70', // diagonal
+      'M 48 28 A 20 20 0 1 0 48 68 A 20 20 0 1 0 48 28',
+      'M 48 4 L 48 18', 'M 48 78 L 48 92',
+      'M 14 48 L 4 48', 'M 92 48 L 82 48',
+      'M 22 22 L 32 32', 'M 64 64 L 74 74',
+      'M 74 22 L 64 32', 'M 32 64 L 22 74',
+    ],
+    fillPaths: [
+      'M 48 28 A 20 20 0 1 0 48 68 A 20 20 0 1 0 48 28 Z',
     ],
     viewBox: '0 0 96 96',
-    strokeWidth: 7,
-    totalLength: 280,
+    strokeWidth: 3.5,
+    totalLength: 300,
   },
   bell: {
+    // Church bell
     paths: [
-      'M 30 62 Q 30 30, 48 22 Q 66 30, 66 62 L 30 62', // bell body
-      'M 26 62 L 70 62', // lip
-      'M 48 14 L 48 22', // top
-      'M 44 62 Q 44 72, 48 74 Q 52 72, 52 62', // clapper
+      'M 28 64 Q 28 28, 48 18 Q 68 28, 68 64 L 28 64',
+      'M 24 64 L 72 64',
+      'M 48 10 L 48 18',
+      'M 44 64 Q 44 76, 48 78 Q 52 76, 52 64',
+    ],
+    fillPaths: [
+      'M 28 64 Q 28 28, 48 18 Q 68 28, 68 64 Z',
     ],
     viewBox: '0 0 96 96',
-    strokeWidth: 7.5,
-    totalLength: 220,
+    strokeWidth: 3.5,
+    totalLength: 240,
   },
 };
 
 /* ═══════════════════════════════════════════════
-   GLOW ICON — Path-trace draw-on with specular edge
+   PREMIUM GLOW ICON
    
-   Animation phases:
-   1. [0→drawFrames] : Outline traces itself on (stroke-dashoffset)
-   2. [drawFrames→drawFrames+10] : Fill fades in with soft glow
-   3. [throughout] : Subtle pulse breathing
+   Phases:
+   1. Draw-on: Stroke traces with specular leading edge
+   2. Fill bloom: Golden fill fades in after draw completes
+   3. Idle: Gentle breathing pulse
+   4. Active: Smooth scale-up with radiating pulse ring
    ═══════════════════════════════════════════════ */
 
 export const GlowIcon = ({ iconName = 'cross', size = 80, delay = 0, isActive = false }) => {
@@ -129,67 +175,75 @@ export const GlowIcon = ({ iconName = 'cross', size = 80, delay = 0, isActive = 
   const iconData = ICON_PATHS[iconName] || ICON_PATHS.cross;
   const drawFrames = theme.timing.iconDrawFrames;
 
-  // Draw-on progress
+  // Draw-on progress (smooth ease)
   const drawProgress = interpolate(local, [0, drawFrames], [0, 1], {
     extrapolateLeft: 'clamp', extrapolateRight: 'clamp',
     easing: Easing.bezier(0.05, 0.95, 0.15, 1.0),
   });
 
-  const glowProgress = interpolate(local, [drawFrames, drawFrames + 10], [0, 1], {
+  // Fill bloom (after draw completes)
+  const fillProgress = interpolate(local, [drawFrames, drawFrames + 15], [0, 1], {
     extrapolateLeft: 'clamp', extrapolateRight: 'clamp',
+    easing: Easing.bezier(0.25, 0.1, 0.25, 1.0),
   });
 
   // Scale spring entrance
   const scaleSpring = spring({
     frame: local, fps,
-    config: { damping: 14, stiffness: 120, mass: 0.5 },
+    config: { damping: 16, stiffness: 120, mass: 0.5 },
   });
+
+  // ── SMOOTH REACTIVE SCALE (no wobble) ──
+  const activeScale = isActive ? 1.18 : 1.0; // Clean scale up
+  const iconScale = interpolate(scaleSpring, [0, 1], [0.4, 1.0]) * activeScale;
   
-  // ── REACTIVE BUMP (TIKTOK PUNCH) ──
-  const activeSpring = spring({
-    frame: isActive ? local % 1000 : 0, 
-    fps,
-    config: { damping: 10, stiffness: 300, mass: 0.4 }, // Snappier
-  });
+  // Gentle breathing (very subtle)
+  const breath = interpolate(Math.sin(local * 0.03), [-1, 1], [0.98, 1.02]);
   
-  const iconScale = interpolate(scaleSpring, [0, 1], [0.6, 1.0]) * (isActive ? 1.3 : 1.0); // Bigger punch
-  const breath = interpolate(Math.sin(local * 0.04), [-1, 1], [0.97, 1.03]);
   const opacity = interpolate(local, [0, 5], [0, 1], { extrapolateLeft: 'clamp' });
-  const glowRadius = interpolate(glowProgress, [0, 1], [0, 45]) + (isActive ? 40 : 0); // Brighter glow
+  
+  // ── MULTI-LAYERED GLOW ──
+  const baseGlow = interpolate(fillProgress, [0, 1], [0, 20]);
+  const activeGlow = isActive ? 35 : 0;
+  const glowRadius = baseGlow + activeGlow;
 
-  // Continuous 3D rotation
-  const rotateY = local * 0.5; // Constant slow spin
-  const activeTilt = isActive ? Math.sin(local * 0.3) * 20 : 0; // Extra erratic tilt when active
-
+  // ── RADIATING PULSE RING ──
+  const pulseFrame = isActive ? local : 0;
+  const pulseSpring = spring({
+    frame: pulseFrame,
+    fps,
+    config: { damping: 12, stiffness: 120, mass: 0.6 },
+  });
+  const pulseScale = interpolate(pulseSpring, [0, 1], [0.6, 2.0]);
+  const pulseOpacity = interpolate(pulseSpring, [0, 0.3, 1], [0, 0.7, 0], { extrapolateRight: 'clamp' });
 
   // Specular leading edge brightness
-  const specularIntensity = interpolate(drawProgress, [0, 0.5, 0.9, 1], [0, 1, 0.6, 0.3]);
-
-  // ── REACTIVE SHOCKWAVE ──
-  const shockwaveScale = interpolate(activeSpring, [0, 1], [0.5, 2.5]);
-  const shockwaveOpacity = interpolate(activeSpring, [0, 0.5, 1], [0, 0.8, 0], { extrapolateRight: 'clamp' });
+  const specularIntensity = interpolate(drawProgress, [0, 0.5, 0.9, 1], [0, 1, 0.6, 0.2]);
 
   if (opacity < 0.01) return null;
 
   return (
     <div style={{
       width: size, height: size,
+      position: 'relative',
       opacity,
-      transform: `scale(${iconScale * breath}) rotateY(${rotateY + activeTilt}deg)`, // Removed Z wobble for silky smoothness
-      filter: `drop-shadow(0 0 ${glowRadius}px ${theme.gold.glow})`,
+      transform: `scale(${iconScale * breath})`,
+      filter: `drop-shadow(0 0 ${glowRadius}px ${theme.gold.glow}) drop-shadow(0 0 ${glowRadius * 0.5}px ${theme.gold.glowStrong})`,
       willChange: 'transform, opacity, filter',
-      mixBlendMode: 'screen',
       transformStyle: 'preserve-3d',
     }}>
-      {/* SHOCKWAVE FLASH */}
-      {isActive && shockwaveOpacity > 0.01 && (
+      {/* PULSE RING (radiates outward when active) */}
+      {isActive && pulseOpacity > 0.01 && (
         <div style={{
-          position: 'absolute', inset: '-50%',
+          position: 'absolute',
+          top: '50%', left: '50%',
+          width: size * 0.8, height: size * 0.8,
+          marginTop: -size * 0.4, marginLeft: -size * 0.4,
           borderRadius: '50%',
-          border: `2px solid ${theme.gold.specular}`,
-          transform: `scale(${shockwaveScale})`,
-          opacity: shockwaveOpacity,
-          boxShadow: `0 0 20px ${theme.gold.glowStrong}, inset 0 0 20px ${theme.gold.glow}`,
+          border: `1.5px solid ${theme.gold.bright}`,
+          transform: `scale(${pulseScale})`,
+          opacity: pulseOpacity,
+          boxShadow: `0 0 12px ${theme.gold.glow}`,
           pointerEvents: 'none',
         }} />
       )}
@@ -200,22 +254,45 @@ export const GlowIcon = ({ iconName = 'cross', size = 80, delay = 0, isActive = 
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
       >
-        {/* Glow layer (behind, blurred) */}
-        {glowProgress > 0.01 && iconData.paths.map((d, i) => (
+        <defs>
+          <filter id={`glow-${iconName}`}>
+            <feGaussianBlur stdDeviation="4" />
+          </filter>
+          {/* Golden gradient for fills */}
+          <linearGradient id={`goldFill-${iconName}`} x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor={theme.gold.warm} />
+            <stop offset="50%" stopColor={theme.gold.primary} />
+            <stop offset="100%" stopColor={theme.gold.bright} />
+          </linearGradient>
+        </defs>
+
+        {/* Layer 1: Deep warm glow (behind everything) */}
+        {fillProgress > 0.01 && iconData.paths.map((d, i) => (
           <path
-            key={`glow-${i}`}
+            key={`deep-glow-${i}`}
             d={d}
-            stroke={theme.gold.glowStrong}
-            strokeWidth={iconData.strokeWidth + 6}
+            stroke={theme.gold.warm}
+            strokeWidth={iconData.strokeWidth + 8}
             strokeLinecap="round"
             strokeLinejoin="round"
             fill="none"
-            opacity={glowProgress * 0.6}
-            filter="url(#iconBlur)"
+            opacity={fillProgress * 0.3}
+            filter={`url(#glow-${iconName})`}
           />
         ))}
 
-        {/* Main stroke (draw-on via dashoffset) */}
+        {/* Layer 2: Golden fill (blooms in after draw) */}
+        {fillProgress > 0.01 && iconData.fillPaths && iconData.fillPaths.map((d, i) => (
+          <path
+            key={`fill-${i}`}
+            d={d}
+            fill={`url(#goldFill-${iconName})`}
+            opacity={fillProgress * 0.15}
+            stroke="none"
+          />
+        ))}
+
+        {/* Layer 3: Main stroke (draw-on via dashoffset) */}
         {iconData.paths.map((d, i) => {
           const segLen = iconData.totalLength / iconData.paths.length;
           const offset = segLen * (1 - drawProgress);
@@ -234,28 +311,36 @@ export const GlowIcon = ({ iconName = 'cross', size = 80, delay = 0, isActive = 
           );
         })}
 
-        {/* Specular leading edge (bright flash at draw tip) */}
+        {/* Layer 4: Specular leading edge */}
         {drawProgress > 0.01 && drawProgress < 0.95 && iconData.paths.map((d, i) => (
           <path
             key={`spec-${i}`}
             d={d}
             stroke={theme.gold.specular}
-            strokeWidth={iconData.strokeWidth + 1}
+            strokeWidth={iconData.strokeWidth + 1.5}
             strokeLinecap="round"
             strokeLinejoin="round"
             fill="none"
-            strokeDasharray={`${8} ${iconData.totalLength}`}
-            strokeDashoffset={iconData.totalLength * (1 - drawProgress) - 4}
-            opacity={specularIntensity * 1.0}
+            strokeDasharray={`6 ${iconData.totalLength}`}
+            strokeDashoffset={iconData.totalLength * (1 - drawProgress) - 3}
+            opacity={specularIntensity}
           />
         ))}
 
-        {/* Blur filter definition */}
-        <defs>
-          <filter id="iconBlur">
-            <feGaussianBlur stdDeviation="3" />
-          </filter>
-        </defs>
+        {/* Layer 5: Mid-range aura glow */}
+        {fillProgress > 0.01 && iconData.paths.map((d, i) => (
+          <path
+            key={`aura-${i}`}
+            d={d}
+            stroke={theme.gold.glowStrong}
+            strokeWidth={iconData.strokeWidth + 4}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            fill="none"
+            opacity={fillProgress * 0.45}
+            filter={`url(#glow-${iconName})`}
+          />
+        ))}
       </svg>
     </div>
   );
@@ -263,10 +348,6 @@ export const GlowIcon = ({ iconName = 'cross', size = 80, delay = 0, isActive = 
 
 /* ═══════════════════════════════════════════════
    INTERACTIVE LIGHT CAST
-   When an icon draws on, it casts a soft golden
-   highlight onto nearby elements. Returns a div
-   with a radial gradient positioned relative to
-   the icon location.
    ═══════════════════════════════════════════════ */
 export const IconLightCast = ({ x = '50%', y = '40%', intensity = 0 }) => {
   if (intensity < 0.01) return null;
@@ -274,14 +355,14 @@ export const IconLightCast = ({ x = '50%', y = '40%', intensity = 0 }) => {
   return (
     <div style={{
       position: 'absolute', inset: 0,
-      background: `radial-gradient(ellipse 45% 35% at ${x} ${y}, rgba(212,175,55,${0.12 * intensity}) 0%, transparent 70%)`,
+      background: `radial-gradient(ellipse 50% 40% at ${x} ${y}, rgba(212,175,55,${0.08 * intensity}) 0%, transparent 70%)`,
       pointerEvents: 'none',
       zIndex: 5,
     }} />
   );
 };
 
-// Assign icon to phrase based on line index (cycles through)
+// Assign icon to phrase based on line index
 export function getIconForLine(lineIdx) {
   return theme.icons[lineIdx % theme.icons.length];
 }
