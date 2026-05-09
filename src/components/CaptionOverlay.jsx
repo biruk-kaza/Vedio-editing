@@ -379,6 +379,76 @@ const CaptionPage = ({ line, lineIdx, fps, seqStartFrame, audioPulse }) => {
 };
 
 /* ═══════════════════════════════════════════════
+   VIRTUAL 3D CAMERA (The Whip & Push)
+   ═══════════════════════════════════════════════ */
+const VirtualCamera = ({ words, fps, children }) => {
+  const frame = useCurrentFrame();
+  const absoluteTimeSec = frame / fps;
+
+  // Find if a word just started recently (within the last 0.2 seconds)
+  let activeWordIndex = -1;
+  for (let i = 0; i < words.length; i++) {
+    const w = words[i];
+    if (absoluteTimeSec >= w.start && absoluteTimeSec < w.end + 0.1) {
+      activeWordIndex = i;
+      break;
+    }
+  }
+
+  // Generate a continuous spring that "bumps" whenever a new word starts
+  // We use the word index as the target for the spring, so it moves 1 unit per word
+  const cameraBumpSpring = spring({
+    frame: frame,
+    fps,
+    config: { damping: 12, stiffness: 150, mass: 0.5 },
+  });
+
+  // Calculate local bump based on how close we are to the start of the active word
+  let localBump = 0;
+  if (activeWordIndex !== -1) {
+    const activeWord = words[activeWordIndex];
+    const framesSinceStart = frame - (activeWord.start * fps);
+    if (framesSinceStart >= 0) {
+      // Snappy attack, smooth decay
+      const push = spring({
+        frame: framesSinceStart,
+        fps,
+        config: { damping: 14, stiffness: 200, mass: 0.5 }
+      });
+      const pull = spring({
+        frame: Math.max(0, framesSinceStart - 5), // Pull back starts slightly after
+        fps,
+        config: { damping: 16, stiffness: 100, mass: 0.6 }
+      });
+      localBump = Math.max(0, push - pull);
+    }
+  }
+
+  // The "Whip & Push" effect
+  // Zoom in by up to 15% on word hit
+  const cameraScale = 1.0 + (localBump * 0.15); 
+  
+  // Whip tilt alternates direction based on word index to create erratic handheld feel
+  const tiltDir = activeWordIndex % 2 === 0 ? 1 : -1;
+  const cameraTiltZ = localBump * 2.5 * tiltDir;
+  const cameraTiltX = localBump * 3.0; // Always tilt back slightly on punch
+
+  return (
+    <div style={{
+      position: 'absolute',
+      inset: 0,
+      transform: `scale(${cameraScale}) rotateZ(${cameraTiltZ}deg) rotateX(${cameraTiltX}deg)`,
+      transformOrigin: 'center center',
+      willChange: 'transform',
+      transformStyle: 'preserve-3d',
+      perspective: '1200px',
+    }}>
+      {children}
+    </div>
+  );
+};
+
+/* ═══════════════════════════════════════════════
    MAIN OVERLAY
    ═══════════════════════════════════════════════ */
 export const CaptionOverlay = ({ words = [], introFrames = 0, audioPulse = 0 }) => {
@@ -392,27 +462,29 @@ export const CaptionOverlay = ({ words = [], introFrames = 0, audioPulse = 0 }) 
 
   return (
     <AbsoluteFill style={{ zIndex: 10, pointerEvents: 'none' }}>
-      {lines.map((line, i) => {
-        const startFrame = introFrames + Math.floor((line.start + offset) * fps) - 4;
-        const endFrame = introFrames + Math.floor((line.end + offset) * fps) + 15;
-        const duration = Math.max(1, endFrame - startFrame);
+      <VirtualCamera words={words} fps={fps}>
+        {lines.map((line, i) => {
+          const startFrame = introFrames + Math.floor((line.start + offset) * fps) - 4;
+          const endFrame = introFrames + Math.floor((line.end + offset) * fps) + 15;
+          const duration = Math.max(1, endFrame - startFrame);
 
-        return (
-          <Sequence
-            key={`page-${i}`}
-            from={Math.max(0, startFrame)}
-            durationInFrames={duration}
-          >
-            <CaptionPage 
-              line={line} 
-              lineIdx={i} 
-              fps={fps} 
-              seqStartFrame={Math.max(0, startFrame)} 
-              audioPulse={audioPulse}
-            />
-          </Sequence>
-        );
-      })}
+          return (
+            <Sequence
+              key={`page-${i}`}
+              from={Math.max(0, startFrame)}
+              durationInFrames={duration}
+            >
+              <CaptionPage 
+                line={line} 
+                lineIdx={i} 
+                fps={fps} 
+                seqStartFrame={Math.max(0, startFrame)} 
+                audioPulse={audioPulse}
+              />
+            </Sequence>
+          );
+        })}
+      </VirtualCamera>
     </AbsoluteFill>
   );
 };

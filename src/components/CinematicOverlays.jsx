@@ -159,3 +159,46 @@ export const BreathingVignette = () => {
     }} />
   );
 };
+
+// ═══════════════════════════════════════════════
+// 16MM FILM SCRATCHES — Tactile analog damage
+// ═══════════════════════════════════════════════
+const SCRATCH_COUNT = 8;
+const scratches = Array.from({ length: SCRATCH_COUNT }, (_, i) => ({
+  id: i,
+  seed: i * 42,
+}));
+
+export const FilmScratches = () => {
+  const frame = useCurrentFrame();
+
+  return (
+    <AbsoluteFill style={{ pointerEvents: 'none', zIndex: 12, mixBlendMode: 'overlay', opacity: 0.65 }}>
+      <svg width="100%" height="100%">
+        {scratches.map((s) => {
+          // Rapid, jerky frame updates (12fps feel)
+          const stepFrame = Math.floor(frame / 2);
+          const active = seededRandom(s.seed + stepFrame * 0.1) > 0.85; // Only appear rarely
+          if (!active) return null;
+
+          const x = seededRandom(s.seed + stepFrame) * 100;
+          const length = 20 + seededRandom(s.seed + stepFrame * 2) * 80;
+          const yOffset = seededRandom(s.seed + stepFrame * 3) * 50;
+
+          return (
+            <line
+              key={s.id}
+              x1={`${x}%`}
+              y1={`${yOffset}%`}
+              x2={`${x}%`}
+              y2={`${yOffset + length}%`}
+              stroke="white"
+              strokeWidth={0.5 + seededRandom(s.seed) * 1.5}
+              opacity={0.3 + seededRandom(s.seed + 1) * 0.5}
+            />
+          );
+        })}
+      </svg>
+    </AbsoluteFill>
+  );
+};

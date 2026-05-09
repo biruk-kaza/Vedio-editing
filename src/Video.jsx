@@ -32,6 +32,7 @@ import { IntroSequence } from './components/IntroSequence.jsx';
 import { OutroSequence } from './components/OutroSequence.jsx';
 import { ProgressBar } from './components/ProgressBar.jsx';
 import { LightLeak } from './components/LightLeak.jsx';
+import { FloatingDust, AnamorphicLeaks, FilmScratches, BreathingVignette } from './components/CinematicOverlays.jsx';
 import { theme } from './utils/theme.js';
 
 const { fontFamily: ethiopicFont } = loadEthiopic('normal', {
@@ -156,6 +157,7 @@ export const EOTCVideo = ({
         <AbsoluteFill style={{ transform: midTransform, willChange: 'transform' }}>
           <LightRays />
           <ParticleField />
+          <FloatingDust />
         </AbsoluteFill>
       </Sequence>
 
@@ -204,10 +206,11 @@ export const EOTCVideo = ({
             backgroundSize: theme.bg.grainScale, mixBlendMode: 'overlay',
           }} />
           {/* Breathing Vignette */}
-          <div style={{
-            position: 'absolute', inset: 0,
-            background: `radial-gradient(ellipse 55% 42% at 50% 50%, transparent 10%, rgba(0,0,0,${interpolate(Math.sin(frame * 0.008), [-1, 1], [0.42, 0.52])}) 100%)`,
-          }} />
+          <BreathingVignette />
+          {/* Film Scratches (16mm analog texture) */}
+          <FilmScratches />
+          {/* Anamorphic Light Leaks */}
+          <AnamorphicLeaks />
           {/* Film Halation — warm red glow on bright edges (vintage film look) */}
           <div style={{
             position: 'absolute', inset: 0,
