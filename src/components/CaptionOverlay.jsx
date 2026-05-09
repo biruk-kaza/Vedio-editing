@@ -66,9 +66,37 @@ function groupWordsIntoLines(words, max) {
 }
 
 /* ═══════════════════════════════════════════════
-   No per-word component. Text is rendered as a
-   single cohesive block inside CaptionPage.
+   SMOOTH COLOR WORD — Pure color transition
+   Zero layout shift, zero wobble.
    ═══════════════════════════════════════════════ */
+const SmoothColorWord = ({ word, globalFrame, fps }) => {
+  const absoluteTimeSec = globalFrame / fps;
+  const wordEndPadded = word.end + 0.05;
+  const isCurrent = absoluteTimeSec >= word.start && absoluteTimeSec < wordEndPadded;
+  const isPast = absoluteTimeSec >= wordEndPadded;
+
+  // Pure color/opacity transition. No transform.
+  const opacity = isCurrent ? 1.0 : (isPast ? 0.8 : 0.3);
+  const color = isCurrent ? '#FFFFFF' : (isPast ? theme.gold.warm : '#A0A0A0');
+  
+  const textShadow = isCurrent 
+    ? `0 0 15px rgba(255, 255, 255, 0.4), 0 2px 8px rgba(0,0,0,0.9)`
+    : '0 2px 6px rgba(0,0,0,0.8)';
+
+  return (
+    <span style={{
+      display: 'inline-block',
+      color,
+      opacity,
+      textShadow,
+      margin: '0 8px',
+      transition: 'color 0.1s ease, opacity 0.1s ease',
+      willChange: 'color, opacity',
+    }}>
+      {word.word}
+    </span>
+  );
+};
 
 /* ═══════════════════════════════════════════════
    CAPTION PAGE — Icon + Text composition
@@ -139,25 +167,28 @@ const CaptionPage = ({ line, lineIdx, fps, seqStartFrame, audioPulse }) => {
     isActive={isAnyWordActive}
   />;
 
-  // Build text as a single uniform string
-  const lineText = line.words.map(w => w.word).join(' ');
-
   const textEl = (
     <div style={{
       display: 'flex',
+      flexWrap: 'wrap',
       justifyContent: 'center',
       alignItems: 'center',
       maxWidth: 880,
-      color: 'rgba(255, 255, 255, 0.95)',
       fontSize,
       fontFamily: theme.fonts.caption,
       fontWeight: 800,
       textAlign: 'center',
       lineHeight: 1.4,
-      textShadow: '0 4px 20px rgba(0, 0, 0, 0.9), 0 0 8px rgba(0, 0, 0, 0.5)',
       WebkitFontSmoothing: 'antialiased',
     }}>
-      {lineText}
+      {line.words.map((word, wi) => (
+        <SmoothColorWord
+          key={`${lineIdx}-${wi}`}
+          word={word}
+          globalFrame={globalFrame}
+          fps={fps}
+        />
+      ))}
     </div>
   );
 
@@ -267,9 +298,53 @@ const SteadyCamera = ({ children }) => {
 };
 
 /* ═══════════════════════════════════════════════
+   GOLDEN WAVEFORM — Sleek Audio Visualizer
+   ═══════════════════════════════════════════════ */
+const GoldenWaveform = ({ audioFrequencies = [] }) => {
+  // Use a subset of frequencies for a minimal, clean look
+  const bars = 40;
+  const step = Math.floor(audioFrequencies.length / bars) || 1;
+  
+  return (
+    <div style={{
+      position: 'absolute',
+      bottom: 40,
+      left: 0,
+      right: 0,
+      height: 60,
+      display: 'flex',
+      justifyContent: 'center',
+      alignItems: 'flex-end',
+      gap: 3,
+      opacity: 0.8,
+    }}>
+      {Array.from({ length: bars }).map((_, i) => {
+        const val = audioFrequencies[i * step] || 0;
+        // Smooth logarithmic height mapping
+        const height = Math.max(4, val * 150); 
+        return (
+          <div
+            key={i}
+            style={{
+              width: 3,
+              height: `${height}px`,
+              background: `linear-gradient(0deg, ${theme.gold.primary}, ${theme.gold.bright})`,
+              borderRadius: '2px 2px 0 0',
+              boxShadow: `0 0 8px ${theme.gold.glow}`,
+              willChange: 'height',
+              transition: 'height 0.05s linear',
+            }}
+          />
+        );
+      })}
+    </div>
+  );
+};
+
+/* ═══════════════════════════════════════════════
    MAIN OVERLAY
    ═══════════════════════════════════════════════ */
-export const CaptionOverlay = ({ words = [], introFrames = 0, audioPulse = 0 }) => {
+export const CaptionOverlay = ({ words = [], introFrames = 0, audioPulse = 0, audioFrequencies = [] }) => {
   const { fps } = useVideoConfig();
   const offset = theme.timing.captionOffsetSec || 0;
 
@@ -303,6 +378,9 @@ export const CaptionOverlay = ({ words = [], introFrames = 0, audioPulse = 0 }) 
           );
         })}
       </SteadyCamera>
+
+      {/* Sleek Audio Visualizer at the very bottom */}
+      <GoldenWaveform audioFrequencies={audioFrequencies} />
     </AbsoluteFill>
   );
 };

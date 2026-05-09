@@ -32,7 +32,7 @@ import { IntroSequence } from './components/IntroSequence.jsx';
 import { OutroSequence } from './components/OutroSequence.jsx';
 import { ProgressBar } from './components/ProgressBar.jsx';
 import { LightLeak } from './components/LightLeak.jsx';
-import { FloatingDust, AnamorphicLeaks, FilmScratches, BreathingVignette } from './components/CinematicOverlays.jsx';
+import { FloatingDust, AnamorphicLeaks, BreathingVignette } from './components/CinematicOverlays.jsx';
 import { theme } from './utils/theme.js';
 
 const { fontFamily: ethiopicFont } = loadEthiopic('normal', {
@@ -82,6 +82,7 @@ export const EOTCVideo = ({
   }, [audioSrc, audioHandle, isVideoMode]);
 
   let audioPulse = 0;
+  let audioFrequencies = new Array(32).fill(0);
   const introFrames = isVideoMode ? 0 : theme.timing.introDuration;
 
   if (audioData && !isVideoMode && frame >= introFrames) {
@@ -90,9 +91,13 @@ export const EOTCVideo = ({
         fps, frame: frame - introFrames, audioData,
         numberOfSamples: 32, optimizeFor: 'speed',
       });
+      audioFrequencies = frequencies;
       const lowFreqs = frequencies.slice(0, 8);
       audioPulse = lowFreqs.reduce((s, v) => s + v, 0) / lowFreqs.length;
-    } catch { audioPulse = 0; }
+    } catch { 
+      audioPulse = 0; 
+      audioFrequencies = new Array(32).fill(0);
+    }
   }
 
   // ═══════════════════════════════════
@@ -132,13 +137,14 @@ export const EOTCVideo = ({
     easing: Easing.bezier(0.45, 0, 0.55, 1),
   });
 
-  const panX = Math.sin(frame * 0.003) * 28;
-  const panY = Math.cos(frame * 0.002) * 18;
-  const rotZ = Math.sin(frame * 0.0012) * 1.2;
+  // ── STEADY CAMERA (No Shaking) ──
+  const panX = 0;
+  const panY = 0;
+  const rotZ = 0;
 
-  const bgTransform = `scale(${cameraScale * 1.12}) translate3d(${-panX * 0.1}px, ${-panY * 0.1}px, ${-cameraZ * 0.3}px) rotate(${-rotZ * 0.1}deg)`;
-  const midTransform = `scale(${cameraScale * 1.06}) translate3d(${-panX * 0.3}px, ${-panY * 0.3}px, ${-cameraZ * 0.15}px) rotate(${-rotZ * 0.3}deg)`;
-  const fgTransform = `scale(${cameraScale}) translate3d(${-panX * 0.75}px, ${-panY * 0.75}px, 0px) rotate(${-rotZ * 0.75}deg)`;
+  const bgTransform = `scale(${cameraScale * 1.12}) translate3d(0px, 0px, ${-cameraZ * 0.3}px)`;
+  const midTransform = `scale(${cameraScale * 1.06}) translate3d(0px, 0px, ${-cameraZ * 0.15}px)`;
+  const fgTransform = `scale(${cameraScale}) translate3d(0px, 0px, 0px)`;
 
   const outroFrames = theme.timing.outroDuration;
   const outroStartFrame = durationInFrames - outroFrames;
@@ -184,7 +190,7 @@ export const EOTCVideo = ({
       {words.length > 0 && (
         <Sequence durationInFrames={durationInFrames} layout="none">
           <AbsoluteFill style={{ transform: fgTransform, willChange: 'transform' }}>
-            <CaptionOverlay words={words} introFrames={introFrames} audioPulse={audioPulse} />
+            <CaptionOverlay words={words} introFrames={introFrames} audioPulse={audioPulse} audioFrequencies={audioFrequencies} />
           </AbsoluteFill>
         </Sequence>
       )}
@@ -207,8 +213,6 @@ export const EOTCVideo = ({
           }} />
           {/* Breathing Vignette */}
           <BreathingVignette />
-          {/* Film Scratches (16mm analog texture) */}
-          <FilmScratches />
           {/* Anamorphic Light Leaks */}
           <AnamorphicLeaks />
           {/* Film Halation — warm red glow on bright edges (vintage film look) */}

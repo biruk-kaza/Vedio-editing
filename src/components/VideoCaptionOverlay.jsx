@@ -62,9 +62,38 @@ function groupWordsIntoLines(words, max) {
 }
 
 /* ═══════════════════════════════════════════════
-   No per-word component. Text is rendered as a
-   single uniform block inside CaptionLine.
+   SMOOTH COLOR WORD
+   Clean, sleek karaoke illumination. Zero wobble.
    ═══════════════════════════════════════════════ */
+const SmoothColorWord = ({ word, globalFrame, fps }) => {
+  const absoluteTimeSec = globalFrame / fps;
+  const wordEndPadded = word.end + 0.05;
+  const isCurrent = absoluteTimeSec >= word.start && absoluteTimeSec < wordEndPadded;
+  const isPast = absoluteTimeSec >= wordEndPadded;
+
+  // Opacity states
+  const opacity = isCurrent ? 1.0 : (isPast ? 0.8 : 0.35);
+  const color = isCurrent ? '#FFFFFF' : (isPast ? theme.gold.warm : '#A0A0A0');
+
+  // Text shadow: clean white glow on active
+  const textShadow = isCurrent
+    ? `0 0 12px rgba(255, 255, 255, 0.5), 0 2px 8px rgba(0,0,0,0.9)`
+    : '0 2px 6px rgba(0,0,0,0.8)';
+
+  return (
+    <span style={{
+      display: 'inline-block',
+      color,
+      opacity,
+      textShadow,
+      margin: '0 7px',
+      transition: 'color 0.1s ease, opacity 0.1s ease',
+      willChange: 'color, opacity, text-shadow',
+    }}>
+      {word.word}
+    </span>
+  );
+};
 
 /* ═══════════════════════════════════════════════
    CAPTION LINE — Frosted glass + searchlight
@@ -265,24 +294,32 @@ const CaptionLine = ({ line, fps, lineIndex, seqStartFrame }) => {
             }}
           />
 
-          {/* ── UNIFORM TEXT ── */}
+          {/* ── KARAOKE TEXT ── */}
           <div
             style={{
               position: 'relative',
               zIndex: 2,
-              textAlign: 'center',
+              display: 'flex',
+              flexWrap: 'wrap',
+              justifyContent: 'center',
               fontSize: FONT_SIZE,
               fontFamily: theme.fonts.caption,
               fontWeight: 700,
+              textAlign: 'center',
               lineHeight: LINE_HEIGHT,
-              color: 'rgba(255, 255, 255, 0.95)',
-              textShadow: '0 2px 8px rgba(0, 0, 0, 0.9)',
               letterSpacing: '0.3px',
               WebkitFontSmoothing: 'antialiased',
               MozOsxFontSmoothing: 'grayscale',
             }}
           >
-            {line.text}
+            {line.words.map((w, i) => (
+              <SmoothColorWord
+                key={i}
+                word={w}
+                globalFrame={globalFrame}
+                fps={fps}
+              />
+            ))}
           </div>
         </div>
       </div>
