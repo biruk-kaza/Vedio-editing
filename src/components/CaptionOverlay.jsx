@@ -109,19 +109,14 @@ const SmoothWord = ({ word, wi, globalFrame, fps, fontSize, localFrame, audioPul
 
   const activeBump = Math.max(0, popSpring - downSpring);
 
-  // ── FLUID STRETCH PHYSICS (RUBBER-BAND) & TIKTOK PUNCH ──
-  // Dramatic scale up for active word, push back for inactive
-  const stretchY = 1.0 + activeBump * 0.25; // More vertical stretch
-  const squashX = 1.0 - activeBump * 0.08;  // More horizontal squash
-  
-  // Base scale: active word pops HUGE (1.25x), inactive words shrink slightly (0.9x)
-  const baseScale = isCurrent ? 1.0 + activeBump * 0.25 : (isPast ? 0.9 : 0.85);
-  
-  // Z-depth: active word pushes forward, inactive fall back
-  const wordZ = isCurrent ? activeBump * 50 : (isPast ? -30 : -50);
+  // ── SILKY SMOOTH TYPOGRAPHY & TRACKING ──
+  // Instead of violently stretching, the word expands elegantly
+  const trackingPx = activeBump * 3.5; // Letter spacing expands when spoken
+  const baseScale = isCurrent ? 1.0 + activeBump * 0.12 : (isPast ? 0.95 : 0.88);
+  const wordZ = isCurrent ? activeBump * 40 : (isPast ? -15 : -30);
 
-  // Dynamic energetic rotation (alternates slightly based on index)
-  const rotationPunch = isCurrent ? activeBump * (wi % 2 === 0 ? 4 : -4) : 0;
+  // Subtle Y-axis lift, not a rubber band stretch
+  const liftY = activeBump * -8;
 
 
   // ── CHROMATIC ABERRATION ──
@@ -154,11 +149,12 @@ const SmoothWord = ({ word, wi, globalFrame, fps, fontSize, localFrame, audioPul
     durationInFrames: 14,
   });
 
-  // Stagger the Y entrance to create a wave effect
-  const entryY = interpolate(enterSpring, [0, 1], [45 + wi * 5, 0]);
-  const entryZ = interpolate(enterSpring, [0, 1], [300, 0]); // Deeper start
-  const entryRotateX = interpolate(enterSpring, [0, 1], [-75, 0]); // More extreme flip
+  const entryY = interpolate(enterSpring, [0, 1], [35 + wi * 5, 0]);
+  const entryZ = interpolate(enterSpring, [0, 1], [200, 0]); // Smoother start
+  const entryRotateX = interpolate(enterSpring, [0, 1], [-45, 0]); // Softer flip
   const entryOpacity = interpolate(enterSpring, [0, 1], [0, 1]);
+  // Optical motion blur on entry
+  const entryBlur = interpolate(enterSpring, [0, 1], [15, 0]);
 
   return (
     <span
@@ -170,19 +166,19 @@ const SmoothWord = ({ word, wi, globalFrame, fps, fontSize, localFrame, audioPul
         fontFamily: theme.fonts.caption,
         fontWeight: 800,
         transform: `
-          translate3d(${jitterX}px, ${entryY + jitterY}px, ${entryZ + wordZ}px) 
+          translate3d(${jitterX}px, ${entryY + jitterY + liftY}px, ${entryZ + wordZ}px) 
           rotateX(${entryRotateX}deg) 
-          rotateZ(${rotationPunch}deg)
-          scaleX(${squashX * baseScale}) 
-          scaleY(${stretchY * baseScale})
+          scale(${baseScale}) 
         `,
         transformOrigin: 'center bottom',
         textShadow: textShadowStack,
         margin: '0 12px',
+        letterSpacing: `${trackingPx}px`,
+        filter: `blur(${entryBlur}px)`,
         lineHeight: 1.45,
         WebkitFontSmoothing: 'antialiased',
         transformStyle: 'preserve-3d',
-        willChange: 'transform, color, text-shadow',
+        willChange: 'transform, color, text-shadow, letter-spacing, filter',
       }}
     >
       {word.word}
@@ -231,14 +227,15 @@ const CaptionPage = ({ line, lineIdx, fps, seqStartFrame, audioPulse }) => {
 
   // Dramatic Exit: Fly towards the camera
   const exitStart = pageDurFrames + 3;
-  const exitProgress = interpolate(localFrame, [exitStart, exitStart + 12], [0, 1], {
+  const exitProgress = interpolate(localFrame, [exitStart, exitStart + 16], [0, 1], {
     extrapolateLeft: 'clamp', extrapolateRight: 'clamp',
-    easing: Easing.bezier(0.8, 0, 0.2, 1), // Faster acceleration
+    easing: Easing.bezier(0.6, 0, 0.4, 1), // Silky S-curve
   });
-  const exitZ = interpolate(exitProgress, [0, 1], [0, 400]); // Fly forward!
-  const exitScale = interpolate(exitProgress, [0, 1], [1.0, 1.2]); // Scale up on exit
+  const exitZ = interpolate(exitProgress, [0, 1], [0, 300]); // Elegant float forward
+  const exitScale = interpolate(exitProgress, [0, 1], [1.0, 1.1]); 
   const exitOpacity = 1 - exitProgress;
-  const exitRotateX = interpolate(exitProgress, [0, 1], [0, 15]); // Tilt back as it flies away
+  const exitRotateX = interpolate(exitProgress, [0, 1], [0, 10]);
+  const exitBlur = interpolate(exitProgress, [0, 0.4, 1], [0, 0, 12]); // Motion blur on exit
 
   const totalScale = entryScale * exitScale * breathe;
   const totalZ = entryZ + exitZ;
@@ -364,13 +361,13 @@ const CaptionPage = ({ line, lineIdx, fps, seqStartFrame, audioPulse }) => {
         alignItems: 'center',
         opacity: totalOpacity,
         transform: `
-          translate(${gateWeaveX}px, ${gateWeaveY}px)
           translateZ(${totalZ}px) 
           scale(${totalScale}) 
           rotateX(${totalRotateX}deg)
         `,
+        filter: `blur(${exitBlur}px)`,
         transformStyle: 'preserve-3d',
-        willChange: 'transform, opacity',
+        willChange: 'transform, opacity, filter',
       }}>
         {layout}
       </div>
@@ -400,7 +397,7 @@ const VirtualCamera = ({ words, fps, children }) => {
   const cameraBumpSpring = spring({
     frame: frame,
     fps,
-    config: { damping: 12, stiffness: 150, mass: 0.5 },
+    config: { damping: 18, stiffness: 100, mass: 0.8 }, // Heavy, liquid camera pan
   });
 
   // Calculate local bump based on how close we are to the start of the active word
@@ -409,29 +406,28 @@ const VirtualCamera = ({ words, fps, children }) => {
     const activeWord = words[activeWordIndex];
     const framesSinceStart = frame - (activeWord.start * fps);
     if (framesSinceStart >= 0) {
-      // Snappy attack, smooth decay
+      // Smooth attack, very slow decay
       const push = spring({
         frame: framesSinceStart,
         fps,
-        config: { damping: 14, stiffness: 200, mass: 0.5 }
+        config: { damping: 20, stiffness: 150, mass: 0.6 }
       });
       const pull = spring({
-        frame: Math.max(0, framesSinceStart - 5), // Pull back starts slightly after
+        frame: Math.max(0, framesSinceStart - 8), 
         fps,
-        config: { damping: 16, stiffness: 100, mass: 0.6 }
+        config: { damping: 22, stiffness: 80, mass: 1.0 } // Sluggish pullback
       });
       localBump = Math.max(0, push - pull);
     }
   }
 
-  // The "Whip & Push" effect
-  // Zoom in by up to 15% on word hit
-  const cameraScale = 1.0 + (localBump * 0.15); 
+  // The "Silky Push" effect
+  const cameraScale = 1.0 + (localBump * 0.08); // Less aggressive zoom
   
-  // Whip tilt alternates direction based on word index to create erratic handheld feel
+  // Whip tilt is much softer
   const tiltDir = activeWordIndex % 2 === 0 ? 1 : -1;
-  const cameraTiltZ = localBump * 2.5 * tiltDir;
-  const cameraTiltX = localBump * 3.0; // Always tilt back slightly on punch
+  const cameraTiltZ = localBump * 1.0 * tiltDir;
+  const cameraTiltX = localBump * 1.5; 
 
   return (
     <div style={{

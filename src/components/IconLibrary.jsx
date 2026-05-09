@@ -165,18 +165,35 @@ export const GlowIcon = ({ iconName = 'cross', size = 80, delay = 0, isActive = 
   // Specular leading edge brightness
   const specularIntensity = interpolate(drawProgress, [0, 0.5, 0.9, 1], [0, 1, 0.6, 0.3]);
 
+  // ── REACTIVE SHOCKWAVE ──
+  const shockwaveScale = interpolate(activeSpring, [0, 1], [0.5, 2.5]);
+  const shockwaveOpacity = interpolate(activeSpring, [0, 0.5, 1], [0, 0.8, 0], { extrapolateRight: 'clamp' });
+
   if (opacity < 0.01) return null;
 
   return (
     <div style={{
       width: size, height: size,
       opacity,
-      transform: `scale(${iconScale * breath}) rotateY(${rotateY + activeTilt}deg) rotateZ(${isActive ? -5 : 0}deg)`,
+      transform: `scale(${iconScale * breath}) rotateY(${rotateY + activeTilt}deg)`, // Removed Z wobble for silky smoothness
       filter: `drop-shadow(0 0 ${glowRadius}px ${theme.gold.glow})`,
       willChange: 'transform, opacity, filter',
       mixBlendMode: 'screen',
       transformStyle: 'preserve-3d',
     }}>
+      {/* SHOCKWAVE FLASH */}
+      {isActive && shockwaveOpacity > 0.01 && (
+        <div style={{
+          position: 'absolute', inset: '-50%',
+          borderRadius: '50%',
+          border: `2px solid ${theme.gold.specular}`,
+          transform: `scale(${shockwaveScale})`,
+          opacity: shockwaveOpacity,
+          boxShadow: `0 0 20px ${theme.gold.glowStrong}, inset 0 0 20px ${theme.gold.glow}`,
+          pointerEvents: 'none',
+        }} />
+      )}
+
       <svg
         viewBox={iconData.viewBox}
         width={size} height={size}
