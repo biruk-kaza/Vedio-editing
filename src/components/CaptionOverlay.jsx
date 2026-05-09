@@ -143,8 +143,8 @@ const SmoothWord = ({ word, wi, globalFrame, fps, fontSize, localFrame, audioPul
   const glowRadius = isCurrent ? 18 + audioGlow * 20 : 0;
 
   const textShadowStack = isCurrent
-    ? `${redFringe}, ${blueFringe}, 0 0 ${glowRadius}px rgba(212,175,55,${0.6 + audioGlow * 0.3}), 0 4px 15px rgba(0,0,0,0.9)`
-    : '0 3px 10px rgba(0,0,0,0.6)';
+    ? `${redFringe}, ${blueFringe}, 0 0 ${glowRadius + activeBump * 15}px rgba(255,215,0,${0.8 + audioGlow * 0.4}), 0 0 ${glowRadius/2}px rgba(255,255,255,0.9), 0 6px 20px rgba(0,0,0,0.95)`
+    : '0 4px 12px rgba(0,0,0,0.8)';
 
   // ── 3D STAGGER ENTRANCE ──
   const enterSpring = spring({
@@ -154,9 +154,10 @@ const SmoothWord = ({ word, wi, globalFrame, fps, fontSize, localFrame, audioPul
     durationInFrames: 14,
   });
 
-  const entryY = interpolate(enterSpring, [0, 1], [35, 0]);
-  const entryZ = interpolate(enterSpring, [0, 1], [200, 0]);
-  const entryRotateX = interpolate(enterSpring, [0, 1], [-65, 0]);
+  // Stagger the Y entrance to create a wave effect
+  const entryY = interpolate(enterSpring, [0, 1], [45 + wi * 5, 0]);
+  const entryZ = interpolate(enterSpring, [0, 1], [300, 0]); // Deeper start
+  const entryRotateX = interpolate(enterSpring, [0, 1], [-75, 0]); // More extreme flip
   const entryOpacity = interpolate(enterSpring, [0, 1], [0, 1]);
 
   return (
@@ -228,16 +229,16 @@ const CaptionPage = ({ line, lineIdx, fps, seqStartFrame, audioPulse }) => {
     extrapolateLeft: 'clamp', extrapolateRight: 'clamp',
   });
 
-  // Exit
+  // Dramatic Exit: Fly towards the camera
   const exitStart = pageDurFrames + 3;
-  const exitProgress = interpolate(localFrame, [exitStart, exitStart + 10], [0, 1], {
+  const exitProgress = interpolate(localFrame, [exitStart, exitStart + 12], [0, 1], {
     extrapolateLeft: 'clamp', extrapolateRight: 'clamp',
-    easing: EASE_EXIT,
+    easing: Easing.bezier(0.8, 0, 0.2, 1), // Faster acceleration
   });
-  const exitZ = interpolate(exitProgress, [0, 1], [0, 80]);
-  const exitScale = interpolate(exitProgress, [0, 1], [1.0, 0.85]);
+  const exitZ = interpolate(exitProgress, [0, 1], [0, 400]); // Fly forward!
+  const exitScale = interpolate(exitProgress, [0, 1], [1.0, 1.2]); // Scale up on exit
   const exitOpacity = 1 - exitProgress;
-  const exitRotateX = interpolate(exitProgress, [0, 1], [0, -5]);
+  const exitRotateX = interpolate(exitProgress, [0, 1], [0, 15]); // Tilt back as it flies away
 
   const totalScale = entryScale * exitScale * breathe;
   const totalZ = entryZ + exitZ;

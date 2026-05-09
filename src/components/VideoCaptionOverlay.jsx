@@ -17,7 +17,8 @@
  * 4. ADAPTIVE FROSTED GLASS — Premium glassmorphism with
  *    breathing inner glow and organic edge softness
  * 
- * 5. ZERO per-word highlighting — uniform professional text
+ * 5. PREMIUM WORD HIGHLIGHTING — Ultra-smooth, Netflix-style
+ *    per-word illumination as it is spoken.
  */
 import React, { useMemo } from 'react';
 import {
@@ -63,6 +64,39 @@ function groupWordsIntoLines(words, max) {
 }
 
 /* ═══════════════════════════════════════════════
+   PREMIUM HIGHLIGHT WORD
+   ═══════════════════════════════════════════════ */
+const HighlightWord = ({ word, globalFrame, fps }) => {
+  const absoluteTimeSec = globalFrame / fps;
+  const wordEndPadded = word.end + 0.05;
+  const isCurrent = absoluteTimeSec >= word.start && absoluteTimeSec < wordEndPadded;
+  const isPast = absoluteTimeSec >= wordEndPadded;
+
+  // Smooth opacity/color transition
+  const opacity = isCurrent ? 1.0 : (isPast ? 0.75 : 0.4);
+  const scale = isCurrent ? 1.08 : 1.0;
+  
+  // Golden glow for active word
+  const textShadow = isCurrent 
+    ? '0 0 15px rgba(255, 255, 255, 0.8), 0 2px 6px rgba(0,0,0,0.9)'
+    : '0 2px 6px rgba(0,0,0,0.9)';
+
+  return (
+    <span style={{
+      display: 'inline-block',
+      color: `rgba(255, 255, 255, ${opacity})`,
+      transform: `scale(${scale})`,
+      textShadow,
+      margin: '0 8px',
+      transition: 'all 0.15s cubic-bezier(0.4, 0, 0.2, 1)',
+      willChange: 'transform, color, text-shadow'
+    }}>
+      {word.word}
+    </span>
+  );
+};
+
+/* ═══════════════════════════════════════════════
    WORLD-CLASS CAPTION LINE
    
    Features:
@@ -70,6 +104,7 @@ function groupWordsIntoLines(words, max) {
    - Dynamic searchlight sweep (golden sheen)
    - Parallax depth (3D floating)
    - Adaptive frosted glass pill
+   - Premium active word highlighting
    ═══════════════════════════════════════════════ */
 const CaptionLine = ({ line, fps, lineIndex, seqStartFrame }) => {
   const frame = useCurrentFrame();
@@ -77,18 +112,19 @@ const CaptionLine = ({ line, fps, lineIndex, seqStartFrame }) => {
   const globalFrame = seqStartFrame + frame;
   const pageDurFrames = Math.ceil((line.end - line.start) * fps);
 
-  // ── ENTRY: Critically-damped spring slide-up ──
+  // ── ENTRY: Critically-damped spring slide-up with 3D tilt ──
   const enterSpring = spring({
     frame,
     fps: configFps,
-    config: { damping: 28, stiffness: 200, mass: 0.6 },
+    config: { damping: 16, stiffness: 180, mass: 0.5 }, // Snappier bounce
     durationInFrames: 14,
   });
 
   const entryOpacity = interpolate(enterSpring, [0, 1], [0, 1]);
-  const entryY = interpolate(enterSpring, [0, 1], [22, 0]);
-  const entryBlur = interpolate(enterSpring, [0, 1], [6, 0]);
-  const entryScale = interpolate(enterSpring, [0, 1], [0.94, 1.0]);
+  const entryY = interpolate(enterSpring, [0, 1], [40, 0]); // Deeper slide
+  const entryBlur = interpolate(enterSpring, [0, 1], [10, 0]);
+  const entryScale = interpolate(enterSpring, [0, 1], [0.85, 1.0]);
+  const entryRotateX = interpolate(enterSpring, [0, 1], [15, 0]); // 3D flip in
 
   // ── EXIT: Smooth dissolve upward with ghost trail ──
   const exitStart = pageDurFrames + 2;
@@ -114,6 +150,7 @@ const CaptionLine = ({ line, fps, lineIndex, seqStartFrame }) => {
   const totalY = entryY + exitY;
   const totalScale = entryScale * exitScale;
   const totalBlur = entryBlur + exitBlur;
+  const totalRotateX = entryRotateX;
 
   // ── DYNAMIC SEARCHLIGHT SWEEP ──
   // A golden specular "sheen" that sweeps left-to-right as the line is spoken
@@ -124,9 +161,9 @@ const CaptionLine = ({ line, fps, lineIndex, seqStartFrame }) => {
     { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }
   );
   // Searchlight position: -20% to 120% of the pill width
-  const searchlightX = interpolate(lineProgress, [0, 1], [-20, 120]);
+  const searchlightX = interpolate(lineProgress, [0, 1], [-30, 130]);
   const searchlightIntensity = interpolate(
-    lineProgress, [0, 0.05, 0.5, 0.95, 1], [0, 0.6, 0.8, 0.6, 0]
+    lineProgress, [0, 0.1, 0.5, 0.9, 1], [0, 1.2, 1.5, 1.2, 0] // Brighter intensity
   );
 
   // ── PARALLAX DEPTH ──
@@ -221,7 +258,7 @@ const CaptionLine = ({ line, fps, lineIndex, seqStartFrame }) => {
             translateX(${parallaxX}px)
             translateY(${totalY + parallaxY}px) 
             scale(${totalScale * breathScale}) 
-            rotateX(${perspTiltX}deg) 
+            rotateX(${perspTiltX + totalRotateX}deg) 
             rotateY(${perspTiltY}deg)
           `,
           filter: totalBlur > 0.1 ? `blur(${totalBlur}px)` : 'none',
@@ -294,31 +331,30 @@ const CaptionLine = ({ line, fps, lineIndex, seqStartFrame }) => {
             }}
           />
 
-          {/* ── UNIFORM TEXT ── */}
-          <span
+          {/* ── PER-WORD HIGHLIGHTING ── */}
+          <div
             style={{
               position: 'relative',
               zIndex: 2,
-              color: 'rgba(255, 255, 255, 0.97)',
+              display: 'flex',
+              flexWrap: 'wrap',
+              justifyContent: 'center',
               fontSize: FONT_SIZE,
               fontFamily: theme.fonts.caption,
-              fontWeight: 700,
+              fontWeight: 800, // Bolder
               textAlign: 'center',
               lineHeight: LINE_HEIGHT,
               letterSpacing: '0.5px',
-              textShadow: `
-                0 2px 6px rgba(0, 0, 0, 0.95),
-                0 0 2px rgba(0, 0, 0, 0.9),
-                0 8px 24px rgba(0, 0, 0, 0.5)
-              `,
               WebkitTextStroke: '0.8px rgba(0, 0, 0, 0.25)',
               paintOrder: 'stroke fill',
               WebkitFontSmoothing: 'antialiased',
               MozOsxFontSmoothing: 'grayscale',
             }}
           >
-            {line.text}
-          </span>
+            {line.words.map((w, i) => (
+              <HighlightWord key={i} word={w} globalFrame={globalFrame} fps={fps} />
+            ))}
+          </div>
         </div>
       </div>
     </AbsoluteFill>
