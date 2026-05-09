@@ -1,65 +1,82 @@
 /**
- * EOTC Voice Studio — Cinema-Grade Background
+ * EOTC Voice Studio — Liquid Aurora Background
  * 
- * ═══ ART DIRECTION ═══
- * Canvas: Deep textured charcoal #0A0A0A (not flat black)
- * Vignette: Organic, asymmetric, slowly breathing
- * Grain: Fine 35mm film grain (binds digital elements)
- * Bokeh: Extremely subtle, deep-layer atmosphere orbs
- * Gradient: Dark warm undertone — barely visible
- * 
- * NO CSS transitions. All via interpolate().
+ * Uses @remotion/noise to generate an impossibly smooth,
+ * non-repeating fluid simulation for the background.
+ * Looks like expensive Apple/Stripe motion graphics.
  */
 import React from 'react';
-import { useCurrentFrame, useVideoConfig, interpolate, AbsoluteFill } from 'remotion';
+import { useCurrentFrame, AbsoluteFill, useVideoConfig } from 'remotion';
+import { noise3D } from '@remotion/noise';
 import { theme } from '../utils/theme.js';
 
 export const AnimatedBackground = () => {
   const frame = useCurrentFrame();
-  const { durationInFrames } = useVideoConfig();
-  const t = frame / Math.max(durationInFrames, 1);
+  const { fps } = useVideoConfig();
+  const time = frame / fps;
 
-  // Slow pulse on base gradient
-  const basePulse = interpolate(Math.sin(frame * 0.008), [-1, 1], [0.82, 1.0]);
+  // Generate ultra-smooth fluid movement vectors using 3D noise
+  // We use time as the Z-axis so it morphs seamlessly over time
+  const getOrbPosition = (seed, speedX, speedY, offset) => {
+    // Noise returns -1 to 1. We map it to -20% to 120% of the screen
+    const nx = noise3D('x' + seed, time * speedX, 0, offset);
+    const ny = noise3D('y' + seed, 0, time * speedY, offset);
+    return {
+      x: 50 + nx * 70, // Swirls smoothly across the entire X axis
+      y: 50 + ny * 70, // Swirls smoothly across the entire Y axis
+    };
+  };
 
-  // Organic bokeh orbs — extremely slow, deep layer
-  const orbs = [
-    { x: 48 + Math.sin(frame * 0.003) * 14, y: 30 + Math.cos(frame * 0.0025) * 10, size: 700, color: 'rgba(70,30,110,0.05)', blur: 130 },
-    { x: 72 + Math.cos(frame * 0.002) * 16, y: 60 + Math.sin(frame * 0.003) * 12, size: 550, color: 'rgba(212,175,55,0.03)', blur: 140 },
-    { x: 22 + Math.sin(frame * 0.0025 + 2) * 10, y: 74 + Math.cos(frame * 0.004) * 7, size: 500, color: 'rgba(15,40,80,0.04)', blur: 120 },
-  ];
-
-  // Organic vignette — asymmetric, breathing
-  // Offset center slightly and wobble
-  const vigX = 50 + Math.sin(frame * 0.005) * 3;
-  const vigY = 50 + Math.cos(frame * 0.004) * 2;
-  const vigStrength = interpolate(Math.sin(frame * 0.006), [-1, 1], [0.50, 0.62]);
-
-  // Secondary warm edge vignette
-  const warmVigStrength = interpolate(Math.sin(frame * 0.003 + 1), [-1, 1], [0.02, 0.05]);
+  const orb1 = getOrbPosition('gold1', 0.1, 0.15, 0);
+  const orb2 = getOrbPosition('gold2', 0.12, 0.1, 100);
+  const orb3 = getOrbPosition('deep1', 0.08, 0.12, 200);
 
   return (
     <AbsoluteFill style={{ backgroundColor: theme.bg.deep, overflow: 'hidden' }}>
-      {/* Subtle warm gradient undertone */}
+      
+      {/* Base charcoal layer */}
+      <AbsoluteFill style={{ backgroundColor: '#07080a' }} />
+
+      {/* Fluid Orb 1 - Bright Warm Gold */}
       <div style={{
-        position: 'absolute', inset: '-15%',
-        background: `radial-gradient(ellipse 75% 55% at 50% 42%, ${theme.bg.gradient1} 0%, ${theme.bg.gradient2} 45%, ${theme.bg.deep} 100%)`,
-        opacity: basePulse,
-        transform: `rotate(${t * 8}deg) scale(1.06)`,
+        position: 'absolute',
+        left: `${orb1.x}%`,
+        top: `${orb1.y}%`,
+        width: '1200px',
+        height: '1200px',
+        transform: 'translate(-50%, -50%)',
+        background: `radial-gradient(circle, rgba(212,175,55,0.15) 0%, transparent 60%)`,
+        filter: 'blur(100px)',
+        willChange: 'transform',
       }} />
 
-      {/* Deep bokeh orbs */}
-      {orbs.map((o, i) => (
-        <div key={i} style={{
-          position: 'absolute', left: `${o.x}%`, top: `${o.y}%`,
-          width: o.size, height: o.size, borderRadius: '50%',
-          background: `radial-gradient(circle, ${o.color} 0%, transparent 65%)`,
-          transform: 'translate(-50%,-50%)',
-          filter: `blur(${o.blur}px)`,
-        }} />
-      ))}
+      {/* Fluid Orb 2 - Deep Copper/Bronze */}
+      <div style={{
+        position: 'absolute',
+        left: `${orb2.x}%`,
+        top: `${orb2.y}%`,
+        width: '1400px',
+        height: '1400px',
+        transform: 'translate(-50%, -50%)',
+        background: `radial-gradient(circle, rgba(160,80,30,0.12) 0%, transparent 60%)`,
+        filter: 'blur(120px)',
+        willChange: 'transform',
+      }} />
 
-      {/* 35mm Film Grain — fine texture to bind elements */}
+      {/* Fluid Orb 3 - Deep Navy/Purple (Provides contrast) */}
+      <div style={{
+        position: 'absolute',
+        left: `${orb3.x}%`,
+        top: `${orb3.y}%`,
+        width: '1600px',
+        height: '1600px',
+        transform: 'translate(-50%, -50%)',
+        background: `radial-gradient(circle, rgba(30,40,80,0.15) 0%, transparent 60%)`,
+        filter: 'blur(140px)',
+        willChange: 'transform',
+      }} />
+
+      {/* 35mm Film Grain — binds the liquid gradients into a tactile cinematic surface */}
       <div style={{
         position: 'absolute', inset: 0,
         opacity: theme.bg.grainOpacity,
@@ -68,21 +85,9 @@ export const AnimatedBackground = () => {
         mixBlendMode: 'overlay',
       }} />
 
-      {/* Organic asymmetric vignette */}
-      <div style={{
-        position: 'absolute', inset: 0,
-        background: `radial-gradient(ellipse 52% 40% at ${vigX}% ${vigY}%, transparent 8%, rgba(0,0,0,${vigStrength}) 100%)`,
-      }} />
+      {/* Edge darkening (Vignette) */}
+      <div style={{ position: 'absolute', inset: 0, boxShadow: 'inset 0 0 150px rgba(0,0,0,0.9)', pointerEvents: 'none' }} />
 
-      {/* Warm edge tint (barely visible golden edge) */}
-      <div style={{
-        position: 'absolute', inset: 0,
-        background: `radial-gradient(ellipse 60% 50% at 50% 50%, transparent 30%, rgba(212,175,55,${warmVigStrength}) 100%)`,
-      }} />
-
-      {/* Cinematic letterbox gradients */}
-      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '10%', background: 'linear-gradient(180deg, rgba(0,0,0,0.5) 0%, transparent 100%)' }} />
-      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '15%', background: 'linear-gradient(0deg, rgba(0,0,0,0.55) 0%, transparent 100%)' }} />
     </AbsoluteFill>
   );
 };
